@@ -23,7 +23,7 @@ available from the City of Chicago data portal.</dd>
 communities in Chicago.</dd>
 <dt>crime_data_models.sas</dt>
 <dd>This file includes the programming statements that are demonstrated
-in the _Getting Started with SAS Viya Data Mining and Machine Learning_
+in the <i>Getting Started with SAS Viya Data Mining and Machine Learning</i>
 document.</dd>
 </dl>
 
