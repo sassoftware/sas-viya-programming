@@ -21,7 +21,7 @@ available from the City of Chicago data portal.</dd>
 <dt>census.sas7bdat</dt>
 <dd>This data set provides a series of socioeconomic indicators for
 communities in Chicago.</dd>
-<dt>CrimeDataModels.sas</dt>
+<dt>crime_data_models.sas</dt>
 <dd>This file includes the programming statements that are demonstrated
 in the _Getting Started with SAS Viya Data Mining and Machine Learning_
 document.</dd>
