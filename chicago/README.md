@@ -14,6 +14,8 @@ crime_data_models.sas file, you need access to a SAS Viya environment.
 
 # About the files
 
+The two data sets are in the sas-viya-programming/data directory.
+
 <dl>
 <dt>crime.sas7bdat</dt>
 <dd>A sample of the "Crimes - 2001 to present" data set that is 
