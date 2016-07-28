@@ -1,26 +1,22 @@
-******************************************************************************;
-* Copyright (c) 2016 by SAS Institute Inc., Cary, NC 27513 USA               *;
-*                                                                            *;
-* Licensed under the Apache License, Version 2.0 (the "License");            *;
-* you may not use this file except in compliance with the License.           *;
-* You may obtain a copy of the License at                                    *;
-*                                                                            *;
-*   http://www.apache.org/licenses/LICENSE-2.0                               *;
-*                                                                            *;
-* Unless required by applicable law or agreed to in writing, software        *;
-* distributed under the License is distributed on an "AS IS" BASIS,          *;
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.   *;
-* See the License for the specific language governing permissions and        *;
-* limitations under the License.                                             *;
-******************************************************************************;
+******************************************************************************/
+*Copyright (c) 2016 by SAS Institute Inc., Cary, NC 27513 USA                */
+*                                                                            */
+*                                                                            */
+* Unless required by applicable law or agreed to in writing, software        */
+* distributed under the License is distributed on an "AS IS" BASIS,          */ 
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.   */ 
+*                                                                            */ 
+*                                                                            */  
+******************************************************************************/;
 
-libname mycas cas ;
-caslib _all_ list;
+option casport=12636 cashost="rdcgrd060.unx.sas.com";
+cas casauto;
+caslib _all_ assign;
 
 
 /********************* Create Formats *********************/
 proc format casfmtlib="chicagofmts" sessref=casauto;
-    value $fbi 
+    value $fbi
     '01A' = 'Homicide 1st & 2nd Degree'
     '02' = 'Criminal Sexual Assault'
     '03' = 'Robbery'
@@ -59,17 +55,12 @@ run;
 title;
 
 /********************* Load the Data into SAS Cloud Analytic Services *********************/
-/*If you did not assign the name chicago when you created the SAS library, substitute the value that you used. */
-
-data work.crime;
-    format date mmddyy10.;
-    set chicago.crime(rename=(date=timestamp));
-    date=datepart(timestamp);
-run;
+/*If you did not asssign the name chicago when you created the SAS library, substitute the value that you used. */
+libname chicago "/u/juspen/public/chicago";
 
 proc casutil;
-    load data=chicago.census;
-    load data=work.crime;      /* Load the modified data, not the original. */
+    load data=chicago.census replace;
+    load data=chicago.crime replace;
 
     contents casdata="crime";
     contents casdata="census";
@@ -101,14 +92,13 @@ run;
 /*Crime and Arrest Rate by Offense*/
 ods graphics / width=8in antialiasmax=5600;
 proc sgplot data=mycas.crimeCensus;
-   format fbi_code $fbi_code.;
    vbar fbi_code / categoryorder=respdesc group=arrest;
    xaxis display=(nolabel);
 run;
 
 /*To see the arrest rate as a percentage of crimes for the top 10 crimes, you can run the following code:*/ 
 proc mdsummary data=mycas.crimeCensus;
-  var arrest_code;
+  var arrest_code ;
   groupby fbi_code;
   output out=mycas.crimeGrouped;
 run;
@@ -174,13 +164,12 @@ run;
 
 /********************* Perform Data Prep *********************/
 
-
+title;
 /*Split the Data into Training, Validation, and Test*/ 
 proc partition data=mycas.crimeCensus partind seed=9878 samppct=30 samppct2=10; 
    target arrest;
    output out=mycas.cwpart copyvars=(_all_); 
 run; 
-
 
 /*Check the Proportion of the Sampling*/ 
 proc mdsummary data=mycas.cwpart;
@@ -188,14 +177,15 @@ proc mdsummary data=mycas.cwpart;
    var arrest_code;
    output out=mycas.split;
 run;
-proc print data=mycas.split;
-   var _partind_ _nobs_ -- _std_;
-run;
 
+proc print data=mycas.split;
+run;
 
 
 /*Explore the Cardinality*/
 proc cardinality data=mycas.cwpart outcard=mycas.card maxlevels=20;
+    var _numeric_;
+    var _char_;
 run;
 
 proc print data=mycas.card;
@@ -214,12 +204,12 @@ run;
 %let int_input= percent: per_capita_income hardship_index;
 
 /* Create a Predictive Model */
-proc forest data=&dset. minleafsize=5 outmodel=mycas.model_forest;
+proc forest data=&dset. ntrees=10 minleafsize=5 outmodel=mycas.model_forest;
    target &target. / level=nominal; 
    input &nom_input. / level=nominal;
    input &int_input. / level=interval;
    partition rolevar=_partind_(train='0' validate='1');
-   score out=mycas.ap_scored_forest copyvars=(_partind_ &target);
+   output out=mycas.ap_scored_forest copyvars=(_partind_ &target);
    title "Random Forest";
 run; 
 
@@ -230,7 +220,7 @@ proc gradboost data=&dset. maxdepth=8 minleafsize=5 seed=9878 outmodel=mycas.mod
    input &nom_input. / level=nominal;
    input &int_input. / level=interval;
    partition rolevar=_partind_(train='0' validate='1');
-   score out=mycas.ap_scored_gradboost copyvars=(_partind_ &target.);
+   output out=mycas.ap_scored_gradboost copyvars=(_partind_ &target.);
    title "Gradient Boost";
 run;  
 
@@ -254,14 +244,13 @@ data mycas.ap_scored_logistic;
 run;
 
 
-
 /* Build a Decision Tree */
-proc treesplit data=&dset. minleafsize=5 outmodel=mycas.model_treesplit;
+proc treesplit data=&dset. minleafsize=5 maxdepth=8 outmodel=mycas.model_treesplit;
     target &target. /level=nominal;
     input &nom_input. /level=nominal;
     input &int_input. /level=interval;
     partition rolevar=_partind_(train='0' validate='1');
-    score out=mycas.ap_scored_treesplit copyvars=(_partind_ &target);
+    output out=mycas.ap_scored_treesplit copyvars=(_partind_ &target);
     title "Decision Tree";
 run;
 
@@ -303,7 +292,7 @@ title "Assess Decision Tree";
 
 /*Prepare ROC and Lift Data Sets for Plotting*/
 data work.all_rocinfo;
-  set work.logistic_rocinfo(keep=sensitivity fpr _partind_ in=l)
+  set work.logistic_rocinfo(keep=sensitivity fpr _partind_ in=l) 
       work.forest_rocinfo(keep=sensitivity fpr _partind_ in=f)
       work.treesplit_rocinfo(keep=sensitivity fpr _partind_ in=t)
       work.gradboost_rocinfo(keep=sensitivity fpr _partind_ in=g);
@@ -350,7 +339,7 @@ proc sgplot data=work.all_liftinfo(where=(_partind_=2));
    title "Lift Chart";
    xaxis label="Percentile" grid;
    series x=depth y=lift / group=model markers 
-                          markerattrs=(symbol=circlefilled);
+                           markerattrs=(symbol=circlefilled);
 run;
 
 /* Create Fit Statistics */
@@ -372,12 +361,13 @@ title "TreeSplit Fit Statistics";
 %print_fitstats(prefix=treesplit);
 
 
+
 /********************* Score New Data *********************/
 /*If you receive an error in the SAS log that is related to missing a CA trust list, *******/ 
 /*then locate the trustedcerts.pem file that is part of the SAS installation, submit code***/
-/*like the following, and then rerun:******/
+/*like the following, and then rerun. *****/
 
-/*options sslcalistloc="/path/to/trustedcerts.pem";*/
+options sslcalistloc="/u/mimcki/cacerts/trustedcerts.pem";
 
 filename chicago url 'https://data.cityofchicago.org/resource/6zsd-86xi.json';
 libname chicago sasejson;
@@ -443,19 +433,19 @@ data mycas.latest_logistic;
   p_&target.0=1-p_&target.;
 run;
 
-proc treesplit data=mycas.latest_crimes inmodel=mycas.model_treesplit;
-    target &target. /level=nominal;
-    input &nom_input. /level=nominal;
-    input &int_input. /level=interval;
-    score out=mycas.latest_treesplit copyvars=(&target);
+proc treesplit data=mycas.latest_crimes inmodel=mycas.model_treesplit noprint;
+   target &target. /level=nominal;
+   input &nom_input. /level=nominal;
+   input &int_input. /level=interval;
+   output out=mycas.latest_treesplit copyvars=(&target);
 run;
 
-proc gradboost data=mycas.latest_crimes inmodel=mycas.model_gradboost;
-    score out=mycas.latest_gradboost copyvars=(&target);
+proc gradboost data=mycas.latest_crimes inmodel=mycas.model_gradboost noprint;
+   output out=mycas.latest_gradboost copyvars=(&target);
 run;
 
-proc forest data=mycas.latest_crimes inmodel=mycas.model_forest;
-  score out=mycas.latest_forest copyvars=(&target);
+proc forest data=mycas.latest_crimes inmodel=mycas.model_forest noprint;
+   output out=mycas.latest_forest copyvars=(&target);
 run;
 
 
@@ -515,7 +505,7 @@ data work.latest_liftinfo;
 run;
 
 /* Plot ROC Curves and Lift Chart */
-ODS Graphics;
+ods graphics;
 proc sgplot data=work.latest_rocinfo aspect=1;
   title "ROC Curves";
   title2 "Latest Data";
@@ -531,5 +521,4 @@ proc sgplot data=work.latest_liftinfo;
   xaxis label="Percentile" grid;
   series x=depth y=lift / group=model markers markerattrs=(symbol=circlefilled);
 run;
-
 
