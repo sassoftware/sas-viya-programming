@@ -9,7 +9,7 @@
 *                                                                            */  
 ******************************************************************************/;
 
-option casport=12636 cashost="rdcgrd060.unx.sas.com";
+option casport=5570 cashost="cloud.example.com";
 cas casauto;
 caslib _all_ assign;
 
@@ -56,7 +56,7 @@ title;
 
 /********************* Load the Data into SAS Cloud Analytic Services *********************/
 /*If you did not asssign the name chicago when you created the SAS library, substitute the value that you used. */
-libname chicago "/u/juspen/public/chicago";
+libname chicago "/path/to/chicago";
 
 proc casutil;
     load data=chicago.census replace;
@@ -367,7 +367,7 @@ title "TreeSplit Fit Statistics";
 /*then locate the trustedcerts.pem file that is part of the SAS installation, submit code***/
 /*like the following, and then rerun. *****/
 
-options sslcalistloc="/u/mimcki/cacerts/trustedcerts.pem";
+* options sslcalistloc="/path/to/trustedcerts.pem";
 
 filename chicago url 'https://data.cityofchicago.org/resource/6zsd-86xi.json';
 libname chicago sasejson;
