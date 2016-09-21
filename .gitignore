@@ -1,0 +1,29 @@
+## Editor temporary/working/backup files
+.#*
+*\#*\#
+[#]*#
+*~
+*$
+*.bak
+*.old
+*flymake*
+*.kdev4
+*.log
+*.swp
+*.pdb
+.project
+.pydevproject
+.settings
+.idea
+.vagrant
+.noseids
+.ipynb_checkpoints
+.tags
+
+## OS generated files
+.directory
+.gdb_history
+.DS_Store
+ehthumbs.db
+Icon?
+Thumbs.db
