@@ -361,7 +361,6 @@ title "TreeSplit Fit Statistics";
 %print_fitstats(prefix=treesplit);
 
 
-
 /********************* Score New Data *********************/
 /*If you receive an error in the SAS log that is related to missing a CA trust list, *******/ 
 /*then locate the trustedcerts.pem file that is part of the SAS installation, submit code***/
@@ -369,15 +368,24 @@ title "TreeSplit Fit Statistics";
 
 * options sslcalistloc="/path/to/trustedcerts.pem";
 
-filename chicago url 'https://data.cityofchicago.org/resource/6zsd-86xi.json';
-libname chicago sasejson;
+/*This option enables Server Name Indication on UNIX*/
+options set=SSL_USE_SNI=1;
 
-data mycas.arrest err;
+/*Retrieve the columns that are used in the model only.   */
+/*Retrieve data with a date after 15FEB16                 */
+filename chicago url 'https://data.cityofchicago.org/resource/6zsd-86xi.json?$query=
+select%20id%2C%20case_number%2C%20date%2C%20community_area
+%2C%20fbi_code%2C%20location_description%20%2Cdomestic%20%2Cbeat
+%20%2Cdistrict%20%2Cward%20%2Carrest
+%20where%20date%20%3E%20%272016-02-15%27';   
+libname chicago sasejson ;
+
+
+data mycas.arrest (replace=yes) err;
   set chicago.root(rename=(
-      date=tmpts arrest=arrest_code domestic=tmpds updated_on=tmpuo
+      date=tmpts arrest=arrest_code domestic=tmpds 
       beat=tbeat community_area=tca district=tdis   id=tid 
-      longitude=tlong latitude=tlat ward=tward
-      x_coordinate=tx y_coordinate=ty year=tyear
+      ward=tward
       ));
 
   if arrest_code eq 0 then arrest = 'false';
@@ -386,19 +394,14 @@ data mycas.arrest err;
   else domestic = 'true';
 
   beat           = input(tbeat, best12.);
-  community_area = input(tca, best12.);
-  district       = input(tdis, best12.);
-  id             = input(tid, best12.);
-  longitude      = input(tlong, best12.);
-  latitude       = input(tlat, best12.);
+  community_area = input(tca,   best12.);
+  district       = input(tdis,  best12.);
+  id             = input(tid,   best12.);
   ward           = input(tward, best12.);
-  x_coordinate   = input(tx, best12.);
-  y_coordinate   = input(ty, best12.);
-  year           = input(tyear, best12.);
-
-  format fbi_code $fbi. block $35. description $59. location_description $47.
-         primary_type $33. arrest domestic $5.
-         arrest_code 8. date mmddyy10. timestamp updated_on datetime. ;
+ 
+  format fbi_code $fbi. location_description $47.
+         arrest domestic $5.
+         arrest_code 8. date mmddyy10. timestamp datetime. ;
 
   pos = kindex(tmpts, 'T');
   if -1 eq pos then output err;
@@ -406,27 +409,19 @@ data mycas.arrest err;
   time = input(substr(tmpts,pos+1), time.);
   timestamp = dhms(date,0,0,time);
 
-  pos = kindex(tmpuo, 'T');
-  if -1 eq pos then output err;
-  uodate = input(substr(tmpuo,1,pos-1), yymmdd10.);
-  uotime = input(substr(tmpuo,pos+1), time.);
-  updated_on = dhms(uodate,0,0,uotime);
-
-
-  drop tmpts tmpuo pos time tmpds uodate uotime tbeat tca tdis tid 
-       tlong tlat tward tx ty tyear;
+  drop tmpts pos time tmpds tbeat tca tdis tid tward;
   output mycas.arrest;
 run;
 
-data mycas.latest_crimes;
-    merge mycas.arrest(in=in1 where=(date > '15FEB2016'd)) mycas.census(in=in2);
+data mycas.latest_crimes(replace=yes);
+    merge mycas.arrest(in=in1) mycas.census(in=in2);
     by community_area;
     if in1;
 run;
 
 
 /* Score the Latest Data */
-data mycas.latest_logistic;
+data mycas.latest_logistic (replace=yes);
   set mycas.latest_crimes;
   %include "&outdir./logselect1.sas";
   p_&target.1=p_&target.;
@@ -447,7 +442,6 @@ run;
 proc forest data=mycas.latest_crimes inmodel=mycas.model_forest noprint;
    output out=mycas.latest_forest copyvars=(&target);
 run;
-
 
 /* Assess the Models on the Latest Data */
 %macro assess_latest(prefix=, var_evt=, var_nevt=);
