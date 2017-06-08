@@ -1,0 +1,322 @@
+---
+title: "Data Mining Workflow"
+output:
+  pdf_document: default
+  html_notebook: default
+  html_document: default
+---
+
+## Set Up the R Notebook for Analysis
+
+```{r setup, results='hide', warning=FALSE}
+# Load necessary packages
+library('swat')
+library('ggplot2')
+library('reshape2')
+options(cas.print.messages = FALSE)
+
+# Data name
+indata <- 'hmeq'
+
+# Hostname, port, username, password
+conn <- CAS(hostname, 8777, protocol = 'http')
+
+# Read in the dataset
+castbl <- cas.read.csv(conn, paste0('http://support.sas.com/documentation',
+                                    '/onlinedoc/viya/exampledatasets/hmeq.csv'))
+```
+
+<br>
+
+## View Data
+
+```{r investigate}
+# Print the first few rows
+head(castbl)
+```
+
+<br>
+
+## Get Summary Statistics
+
+```{r summarize, warning=FALSE}
+# Use summary function to get variable summary
+summary(castbl)
+```
+
+<br>
+
+## Visualize Numeric Variables
+
+```{r histogram, warning = FALSE}
+# Bring data locally
+df <- to.casDataFrame(castbl, obs = nrow(castbl))
+
+# Use reshape2's melt to help with data formatting
+d <- melt(df[sapply(df, is.numeric)], id.vars=NULL)
+ggplot(d, aes(x = value)) + 
+    facet_wrap(~variable,scales = 'free_x') + 
+    geom_histogram(fill = 'blue', bins = 25) 
+```
+
+<br>
+
+## Check for Missingness
+
+```{r missingness check}
+# Check for missing values
+tbl <- cas.simple.distinct(castbl)$Distinct[,c('Column', 'NMiss')]
+tbl
+```
+
+```{r visualize missing}
+# Visualize the missing data
+tbl$PctMiss <- tbl$NMiss/nrow(castbl)
+ggplot(tbl, aes(Column, PctMiss)) +
+  geom_col(fill = 'blue') +
+  ggtitle('Pct Missing Values') +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+<br>
+
+## Impute Missing Values
+
+```{r impute}
+# Impute missing values
+cas.dataPreprocess.impute(castbl,
+    methodContinuous = 'MEDIAN',
+    methodNominal    = 'MODE',
+    inputs           = colnames(castbl)[-1],
+    copyAllVars      = TRUE,
+    casOut           = list(name = indata, replace = TRUE)
+)
+```
+
+<br>
+
+## Split the Data into Training and Validation
+
+```{r partition, results='hide', warning=FALSE}
+# Load the sampling actionset
+loadActionSet(conn, 'sampling')
+
+# Partition the data
+cas.sampling.srs(conn,
+    table   = indata,
+    samppct = 30,
+    partind = TRUE,
+    output  = list(casOut = list(name = indata, replace = T), copyVars = 'ALL')
+)
+```
+
+```{r verify partition}
+# Load the fedsql actionset
+loadActionSet(conn, 'fedsql')
+
+# Make sure the partition worked correctly using SQL
+cas.fedsql.execDirect(conn, query = paste0("
+    SELECT 
+        CASE WHEN _PartInd_ = 0 THEN 'Training' ELSE 'Validation' END AS name,
+        _PartInd_, 
+        COUNT(*) AS obs 
+    FROM ", indata, "
+    GROUP BY 
+        CASE WHEN _PartInd_ = 0 THEN 'Training' ELSE 'Validation' END,
+        _PartInd_;
+"))$`Result Set`
+```
+
+
+<br>
+
+## Variable Shortcuts
+Note: I do not want to hard code any of my variable names.
+
+```{r shortcuts}
+# Get variable info and types
+colinfo <- head(cas.table.columnInfo(conn, table = indata)$ColumnInfo, -1)
+
+# My target variable is the first column
+target <- colinfo$Column[1]
+
+# For models that can inherently handle missing values (ex: Decision Tree)
+inputs <- colinfo$Column[-1]
+nominals <- c(target, subset(colinfo, Type == 'varchar')$Column)
+
+# For models that cannot handle missing values (ex: Neural Network)
+imp.inputs <- grep('IMP_', inputs, value = T)
+imp.nominals <- c(target, grep('IMP_', nominals, value = T))
+```
+
+<br>
+
+# Model Building
+
+## Decision Tree
+
+```{r decision tree, warning=FALSE}
+# Load the decsion tree actionset
+loadActionSet(conn, 'decisionTree')
+
+# Train the decision tree model
+cas.decisionTree.dtreeTrain(conn,
+    table    = list(name = indata, where = '_PartInd_ = 0'),
+    target   = target, 
+    inputs   = inputs, 
+    nominals = nominals,
+    varImp   = TRUE,
+    casOut   = list(name = 'dt_model', replace = TRUE)
+)
+```
+
+<br>
+
+## Random Forest
+
+```{r random forest, warning=F}
+# Train the random forest model
+cas.decisionTree.forestTrain(conn,
+    table    = list(name = indata, where = '_PartInd_ = 0'),
+    target   = target, 
+    inputs   = inputs, 
+    nominals = nominals,
+    casOut   = list(name = 'rf_model', replace = TRUE)
+)
+```
+
+<br>
+
+## Gradient Boosting
+
+```{r gradient boosting, warning=F}
+# Train the gradient boosting model
+cas.decisionTree.gbtreeTrain(conn,
+    table    = list(name = indata, where = '_PartInd_ = 0'),
+    target   = target, 
+    inputs   = inputs, 
+    nominals = nominals,
+    casOut   = list(name = 'gbt_model', replace = TRUE)
+)
+```
+
+<br>
+
+## Neural Network
+
+```{r neural network, warning=F}
+# Load the neuralNet actionset
+loadActionSet(conn, 'neuralNet')
+
+# Build a neural network model
+cas.neuralNet.annTrain(conn,
+    table    = list(name = indata, where = '_PartInd_ = 0'),
+    target   = target, 
+    inputs   = imp.inputs, 
+    nominals = imp.nominals,
+    casOut   = list(name = 'nn_model', replace = TRUE)
+)
+```
+
+<br>
+
+## Score the Models
+
+```{r score, results='hide', warning = F}
+# Score the models
+models <- c('dt','rf','gbt','nn')
+scores <- c(cas.decisionTree.dtreeScore, cas.decisionTree.forestScore, 
+            cas.decisionTree.gbtreeScore, cas.neuralNet.annScore)
+names(scores) <- models
+
+# Function to help automate prediction process on new data
+score.params <- function(model){return(list(
+    object       = defCasTable(conn, indata),
+    modelTable   = list(name = paste0(model, '_model')),
+    copyVars     = list(target, '_PartInd_'),
+    assessonerow = TRUE,
+    casOut       = list(name = paste0(model, '_scored'), replace = T)
+))}
+lapply(models, function(x) {do.call(scores[[x]], score.params(x))})
+
+```
+
+<br>
+
+## Compare Confusion Matrix
+
+```{r confusion matrix, warning=FALSE}
+# Load the percentile actionset for scoring
+loadActionSet(conn, 'percentile')
+
+# Useful function for model assessment
+assess.model <- function(model){
+    cas.percentile.assess(conn,
+        table    = list(name = paste0(model,'_scored'), 
+                        where = '_PartInd_ = 1'),
+        inputs   = paste0('_', model, '_P_           1'),
+        response = target,
+        event    = '1')
+}
+
+model.names <- c('Decision Tree', 'Random Forest', 
+                 'Gradient Boosting', 'Neural Network')
+roc.df <- data.frame()
+for (i in 1:length(models)){
+    tmp <- (assess.model(models[i]))$ROCInfo
+    tmp$Model <- model.names[i] 
+    roc.df <- rbind(roc.df, tmp)
+}
+
+# Manipulate the dataframe
+compare <- subset(roc.df, CutOff == 0.5)
+rownames(compare) <- NULL
+compare[,c('Model','TP','FP','FN','TN')]
+```
+
+<br>
+
+## Compare Misclassification
+
+```{r missclassification}
+# Build a dataframe to compare the misclassification rates
+compare$Misclassification <- 1 - compare$ACC
+miss <- compare[order(compare$Misclassification), c('Model','Misclassification')]
+rownames(miss) <- NULL
+miss
+```
+
+<br>
+
+## Compare ROC Curve
+
+```{r ROC}
+# Add a new column to be used as the ROC curve label
+roc.df$Models <- paste(roc.df$Model, round(roc.df$C, 3), sep = ' - ')
+
+# Create the ROC curve
+ggplot(data = roc.df[c('FPR', 'Sensitivity', 'Models')], 
+       aes(x = as.numeric(FPR), y = as.numeric(Sensitivity), colour = Models)) + 
+       geom_line() +
+       labs(x = 'False Positive Rate', y = 'True Positive Rate')
+```
+
+<br>
+
+## Save the CAS Gradient Boosting Model
+
+```{r save model}
+# Save the champion model for later use
+cas.table.save(conn, table = list(name = 'gbt_model'), name = 'gbt_model', replace = T)
+```
+
+<br>
+
+## End the Session
+
+```{r end session, results='hide'}
+# End the session
+cas.session.endSession(conn)
+```
+
