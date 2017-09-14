@@ -2,7 +2,7 @@ SAS Viya Developer Trial
 =========================================
 
 This repository provides files with data aAS programs that are u to seed 
-the experience for the SAS Viya(TM) Developer Trial that is available from [SAS](https://www.sas.com/en_us/trials/software/viya-developer/form.html
+the experience for the SAS Viya(TM) Developer Trial that is available from [SAS](https://www.sas.com/en_us/trials/software/viya-developer/form.html)
 
 The purpose for this repository is to help existing and future SAS Viya
 customers to develop experience wcapabilitiesocedures and activities
