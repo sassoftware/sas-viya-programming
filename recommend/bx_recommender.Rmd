@@ -3,6 +3,16 @@ title: "Book Recommender Example"
 output: html_document
 ---
 
+This example uses explicit ratings. The data set is the Book-Crossing data set. The data preparation excludes the implicit ratings and also excludes ratings that do not match an ISBN in the books data set.
+
+You must have access to a SAS Viya 3.3 release of CAS. To connect to CAS from R, you must install the SAS Scripting Wrapper for Analytics Transfer (SWAT).
+
+For information about SWAT with R, including installation, see https://developer.sas.com/guides/r.html.
+
+For information about the CAS actions used in this example, see Recommender System Action Set: Details in the _SAS Visual Analytics 8.2: Programming Guide_.
+
+Copyright SAS Institute, Inc.
+
 ## Set Up
 ```{r setup, results='hide', warning=FALSE}
 # Load packages
@@ -13,7 +23,10 @@ library(swat)
 options(cas.print.messages = FALSE)
 
 # Host name and port.  Authenticate with a .authinfo file.
-s <- CAS(hostname, 5570)
+#s <- CAS(hostname, 5570)
+Sys.setenv(CAS_CLIENT_SSL_CA_LIST='/u/mimcki/d5-17w47.uda.sashq-r.openstack.sas.com.crt')                                                                    
+#s <- CAS("d5-17w47.uda.sashq-r.openstack.sas.com", 5570) 
+s <- CAS("rdcgrdc", 12636)
 
 # Load the action sets that are used
 loadActionSet(s, "fedSql")
@@ -25,7 +38,8 @@ loadActionSet(s, "recommend")
 
 ### Import the Books CSV File
 ```{r books, results='hide', warning=FALSE}
-files_dir <- "/path/to/bx_files/"
+# files_dir <- "/path/to/bx_files/"
+files_dir <- "/u/mimcki/lasr27/clean/"
 
 ratings_file <- paste0(files_dir, "BX-Book-Ratings.csv")
 books_file <- paste0(files_dir, "BX-Books.csv")
@@ -209,7 +223,9 @@ r
 firstIsbn <- r$Fetch[1,"isbn"]
 filter <- paste0("isbn eq'", firstIsbn, "'")
 
-h <- cas.dataPreprocess.histogram(s, table=list(name="ratings_by_item", where=filter), inputs="rating")
+h <- cas.dataPreprocess.histogram(s, 
+                                  table=list(name="ratings_by_item", where=filter),
+                                  inputs="rating")
 
 h$BinDetails[,c('BinLowerBnd', 'NInBin', 'Percent')]
 ```
@@ -257,8 +273,8 @@ r
 # Plot the optimization of the objective function
 iterhist <- r$IterHistory[,c("Iteration", "Objective")]
 ggplot(iterhist, aes(x=Iteration, y=Objective)) + 
-       geom_line() + 
-       scale_x_continuous(breaks=c(0:9))
+  geom_line() + 
+  scale_x_continuous(breaks=c(0:max(iterhist$Iteration)))
 ```
 
 ## Make Recommendations for One User with the ALS Model
@@ -324,7 +340,8 @@ cas.recommend.recomSim(s,
   threshold=0.2)
 
 one_users_ratings <- function(u) {
-  r <- cas.fedSql.execDirect(s, query=paste0(
+  r <- cas.fedSql.execDirect(s,
+      query=paste0(
     'select t1.*,
     t2.author, t2.title from ratings_by_user as t1
     left outer join books as t2 on (t1.isbn = t2.isbn)
@@ -334,10 +351,9 @@ one_users_ratings <- function(u) {
     r$'Result Set'
 }
 
-one_users_ratings(104437)
-one_users_ratings(199981)
+print(one_users_ratings(104437))
+print(one_users_ratings(199981))
 ```
-
 ## Create a KNN Model Based on Users’ Similarity
 
 ```{r recomKnnTrain}
@@ -345,10 +361,10 @@ cas.recommend.recomKnnTrain(ratings_by_item,
   label='knn1',
   system='bookRecommend',
   similarity='similar_users',
-  k=20,
+  k=20,                                                           # 1
   hold='holdout_users',
   rateinfo='avg_user',
-  user=TRUE)
+  user=TRUE)                                                      # 2
 
 # View recommendations for one user
 users <- '104437'
@@ -394,7 +410,7 @@ yoga_query <- 'yoga fitness'
 cas.recommend.recomSearchQuery(s,
                                system='bookRecommend',
                                model='book_search',
-                               casout=list(name='query_filter', replace=TRUE),
+                               casOut=list(name='query_filter', replace=TRUE),
                                query=yoga_query,
                                n=100)
 
@@ -404,15 +420,15 @@ cas.table.columnInfo(s, table="query_filter")
 yoga_reader <- '99955';
 
 cas.recommend.recomMfScore(s,
-                           system='bookRecommend',
-                           model='als1',
-                           filter='query_filter',
-                           userList = yoga_reader,
-                           n=5,
-                           casOut=list(name="filtered_results", replace=TRUE))
+  system='bookRecommend',
+  model='als1',
+  filter='query_filter',
+  userList = yoga_reader,
+  n=5,
+  casOut=list(name="filtered_results", replace=TRUE))
 
-cas.fedSql.execDirect(s, query='
-      select t1.*,
+cas.fedSql.execDirect(s,
+    query='select t1.*,
       t2.author, t2.title,
       t3._stat_ as "Average Rating", t3._nratings_ as "Number of Ratings"
       from filtered_results as t1
@@ -420,3 +436,7 @@ cas.fedSql.execDirect(s, query='
       left outer join avg_item as t3 on (t1.isbn = t3.isbn)
       order by userid, _rank_;')
 ```
+
+Data were used with permission from Dr. Cai-Nicolas Ziegler. The following publication provides information about the dataset:
+
+Improving Recommendation Lists Through Topic Diversification Cai-Nicolas Ziegler, Sean M. McNee, Joseph A. Konstan, Georg Lausen; _Proceedings of the 14th International World Wide Web Conference (WWW '05)_, May 10-14, 2005, Chiba, Japan. To appear.
