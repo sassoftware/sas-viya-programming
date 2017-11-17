@@ -23,10 +23,7 @@ library(swat)
 options(cas.print.messages = FALSE)
 
 # Host name and port.  Authenticate with a .authinfo file.
-#s <- CAS(hostname, 5570)
-Sys.setenv(CAS_CLIENT_SSL_CA_LIST='/u/mimcki/d5-17w47.uda.sashq-r.openstack.sas.com.crt')                                                                    
-#s <- CAS("d5-17w47.uda.sashq-r.openstack.sas.com", 5570) 
-s <- CAS("rdcgrdc", 12636)
+s <- CAS(hostname, 5570)
 
 # Load the action sets that are used
 loadActionSet(s, "fedSql")
@@ -38,8 +35,7 @@ loadActionSet(s, "recommend")
 
 ### Import the Books CSV File
 ```{r books, results='hide', warning=FALSE}
-# files_dir <- "/path/to/bx_files/"
-files_dir <- "/u/mimcki/lasr27/clean/"
+files_dir <- "/path/to/bx_files/"
 
 ratings_file <- paste0(files_dir, "BX-Book-Ratings.csv")
 books_file <- paste0(files_dir, "BX-Books.csv")
