@@ -1,0 +1,438 @@
+---
+title: "Book Recommender Example"
+output: html_document
+---
+
+This example uses explicit ratings. The data set is the Book-Crossing data set. The data preparation excludes the implicit ratings and also excludes ratings that do not match an ISBN in the books data set.
+
+You must have access to a SAS Viya 3.3 release of CAS. To connect to CAS from R, you must install the SAS Scripting Wrapper for Analytics Transfer (SWAT).
+
+For information about SWAT with R, including installation, see https://developer.sas.com/guides/r.html.
+
+For information about the CAS actions used in this example, see Recommender System Action Set: Details in the _SAS Visual Analytics 8.2: Programming Guide_.
+
+Copyright SAS Institute, Inc.
+
+## Set Up
+```{r setup, results='hide', warning=FALSE}
+# Load packages
+library(ggplot2)
+library(readr)
+library(swat)
+#library(textutils)
+options(cas.print.messages = FALSE)
+
+# Host name and port.  Authenticate with a .authinfo file.
+s <- CAS(hostname, 5570)
+
+# Load the action sets that are used
+loadActionSet(s, "fedSql")
+loadActionSet(s, "dataPreprocess")
+loadActionSet(s, "recommend")
+```
+
+<br>
+
+### Import the Books CSV File
+```{r books, results='hide', warning=FALSE}
+files_dir <- "/path/to/bx_files/"
+
+ratings_file <- paste0(files_dir, "BX-Book-Ratings.csv")
+books_file <- paste0(files_dir, "BX-Books.csv")
+
+winloc <- locale(encoding="ISO-8859-1")
+
+bookstbl <- read_delim(books_file, delim=';', locale=winloc)
+bookstbl <- bookstbl[c(1:5)]
+colnames(bookstbl) <- c("isbn", "title", "author", "year", "publisher")
+bookstbl <- bookstbl[nchar(bookstbl$isbn) == 10,]
+
+# The following optional statements improve the appearance of the output. 
+#bookstbl$publisher <- HTMLdecode(bookstbl$publisher)
+#bookstbl$author <- HTMLdecode(bookstbl$author)
+#bookstbl$title <- HTMLdecode(bookstbl$title)
+
+# Upload the data frame to the server and create an in-memory table.
+books <- as.casTable(s, bookstbl, casOut=list(name="books", replace=TRUE))
+```
+
+<br>
+
+### Import the Ratings CSV File
+
+```{r ratings, results='hide', warning=FALSE}
+ratingstbl <- read_delim(ratings_file, delim=';', locale=winloc)
+colnames(ratingstbl) <- c("userid", "isbn", "rating")
+
+# Eliminate ratings with 0
+ratingstbl <- ratingstbl[ratingstbl$rating > 0,]
+ratingstbl <- ratingstbl[nchar(ratingstbl$isbn) == 10,]
+ratingstbl <- na.omit(ratingstbl)
+
+ratings <- as.casTable(s, ratingstbl, casOut=list(name="ratings", replace=TRUE))
+```
+
+<br>
+
+### Simple Integrity Checks
+
+```{r integrity}
+original_row_count = nrow(ratings)
+
+cas.dataStep.runCode(s, code="
+  data ratings;
+    merge ratings(in=ratings) books(in=books keep=isbn);
+    by isbn;
+    if books and ratings then output;
+  run;")
+
+final_row_count = nrow(ratings)
+
+print(paste0("Original: ", original_row_count))
+print(paste0("Final:    ", final_row_count))
+
+# Check for missing values.
+cas.nmiss(ratings)
+```
+
+<br>
+
+## Calculate the Sparsity and View the Ratings Distribution
+
+```{r sparsity}
+out <- cas.simple.distinct(ratings)
+
+# Calculate the sparsity.
+rating_count <- nrow(ratings)
+
+user_count <- out$Distinct[out$Distinct$Column=='userid','NDistinct']
+
+item_count <- out$Distinct[out$Distinct$Column=='isbn', 'NDistinct']
+
+sparsity <- 1.0 - (rating_count / (user_count * item_count))
+
+sparsdf <- data.frame(label=c("Ratings", "Users", "Items", "Sparsity"),
+                      values=c(rating_count, user_count, item_count, sparsity))
+
+sparsdf
+
+# What does the ratings distribution look like?
+distrib <- cas.simple.freq(ratings$rating)$Frequency[,c('NumVar', 'Frequency')]
+
+ggplot(distrib, aes(x=NumVar, y=Frequency)) + 
+  geom_bar(stat="identity") + 
+  xlab("Rating") + 
+  scale_x_continuous(breaks=c(1:10))
+```
+
+<br>
+
+# Create the Recommender System
+
+```{r recomcreate}
+# Begin by creating two instances of the ratings table. One instance is partitioned
+# by userid and the other is partitioned by item.  In this case, the ISBN is the item.
+cas.table.partition(s, 
+                    table=list(name="ratings", groupBy="userid"), 
+                    casOut=list(name="ratings_by_user", replace=TRUE))
+
+cas.table.partition(s, 
+                    table=list(name="ratings", groupBy="isbn"), 
+                    casout=list(name="ratings_by_item", replace=TRUE))
+
+ratings_by_user <- defCasTable(s, "ratings_by_user")
+ratings_by_item <- defCasTable(s, "ratings_by_item")
+
+dropTable(ratings)
+
+cas.recommend.recomCreate(s, 
+                          system=list(name="bookRecommend", replace=TRUE),
+                          user="userid", 
+                          item="isbn", 
+                          rate="rating")
+```
+<br>
+
+## Create Summary Rating Information Tables
+
+```{r recomRateinfo}
+cas.recommend.recomRateinfo(
+  ratings_by_user, 
+  label="avg_user", 
+  system="bookRecommend", 
+  id="userid", 
+  sparseid="isbn", 
+  sparseval="rating",
+  casOut=list(name="avg_user", replace=TRUE))
+
+avg_user <- defCasTable(s, "avg_user")
+
+head(avg_user, 10)
+
+cas.recommend.recomRateinfo(ratings_by_item, 
+                            label="avg_item", 
+                            system="bookRecommend", 
+                            id="isbn", 
+                            sparseid="userid", 
+                            sparseval="rating", 
+                            casOut=list(name="avg_item", replace=TRUE))
+
+avg_item <- defCasTable(s, "avg_item")
+
+head(avg_item, 10)
+```
+The tables that are created with the recomRateinfo action can be used for simple
+data exploration.
+
+<br>
+
+## Simple Exploration
+
+```{r explore}
+# Find the discerning reviewers--more than three reviews and with consistently
+# low ratings.
+cas.table.fetch(s, 
+                table=list(name="avg_user", where="_NRatings_ > 3"), 
+                sortby="_Stat_", 
+                to=10)
+
+# Generous reviewers
+cas.table.fetch(s, 
+                table=list(name="avg_user", where="_NRatings_ > 3"), 
+                sortby=list(list(name="_stat_", order="descending"), list(name="_nratings_", order="descending")), 
+                to=10)
+
+# Ten most frequently reviewed books
+cas.fedSql.execDirect(s, query='
+  select t1.isbn, t1._stat_ as "Average Rating",
+  t1._nratings_ as "Number of Ratings",
+  t2.author, t2.title from
+  avg_item as t1 join books as t2
+  on (t1.isbn = t2.isbn) order by 3 desc limit 10')
+
+# Somewhat popular, but less highly rated books
+r <- cas.table.fetch(s, 
+                     table=list(name="avg_item", where="_nratings_ > 10"),
+                     sortBy=list(list(name="_Stat_")))
+r
+
+firstIsbn <- r$Fetch[1,"isbn"]
+filter <- paste0("isbn eq'", firstIsbn, "'")
+
+h <- cas.dataPreprocess.histogram(s, 
+                                  table=list(name="ratings_by_item", where=filter),
+                                  inputs="rating")
+
+h$BinDetails[,c('BinLowerBnd', 'NInBin', 'Percent')]
+```
+<br>
+
+# Make Recommendations with Matrix Factorization Models
+First, create a holdout group. From a random selection of 20% of users, hold out 1 rating.
+
+```{r recommf}
+cas.recommend.recomSample(ratings_by_user,
+  model="holdout_users",
+  system="bookRecommend",
+  hold = 1,
+  withHold = 0.2,
+  seed = 1234,
+  id = "userid",
+  sparseId = "isbn",
+  casOut = list(name="holdout_users", replace=TRUE))
+
+holdout_users <- defCasTable(s, "holdout_users")
+```
+
+## Build an Alternating Least Squares Model
+
+```{r recomalsFirst}
+r <- cas.recommend.recomAls(s,
+      tableU = "ratings_by_user",
+      tableI = "ratings_by_item",
+      system = "bookRecommend",
+      label  = "als1",
+      casOutU = list(name="als_u", replace=TRUE),
+      casOutI = list(name="als_i", replace=TRUE),
+      rateinfo = "avg_user",
+      maxIter = 20,
+      hold = "holdout_users",
+      seed = 1234,
+      details = TRUE,
+      k = 50,
+      stagnation = 10,
+      threshold = 0.1)
+
+# Display the tabular results
+r
+
+# Plot the optimization of the objective function
+iterhist <- r$IterHistory[,c("Iteration", "Objective")]
+ggplot(iterhist, aes(x=Iteration, y=Objective)) + 
+  geom_line() + 
+  scale_x_continuous(breaks=c(0:max(iterhist$Iteration)))
+```
+
+## Make Recommendations for One User with the ALS Model
+
+```{r recommfscoreFirst}
+# Recommendations for one user
+user = '104437'
+
+cas.recommend.recomMfScore(s,
+                           system = "bookRecommend",
+                           model  = "als1",
+                           userList = user,
+                           n = 5,
+                           casOut = list(name="recommendations", replace=TRUE))
+
+cas.fedSql.execDirect(s, query='
+  select t1.*,
+  t2.author, t2.title from recommendations
+  as t1
+  left outer join books as t2 on (t1.isbn = t2.isbn)
+  order by userid, _rank_;')
+```
+
+## Make Recommendations for Holdout Users with the ALS Model
+
+```{r recommfscoreSecond}
+cas.recommend.recomMfScore(s,
+                           system = "bookRecommend",
+                           model  = "als1",
+                           userTable = "holdout_users",
+                           n = 5,
+                           casOut = list(name="recommend_heldout", replace=TRUE))
+
+r <- cas.fedSql.execDirect(s, query='
+       select t1.*,
+       t2.author, t2.title,
+       t3._stat_ as "Average Rating", t3._nratings_ as "Number of Ratings"
+       from recommend_heldout as t1
+       left outer join books as t2 on (t1.isbn = t2.isbn)
+       left outer join avg_item as t3 on (t1.isbn = t3.isbn)
+       order by userid, _rank_;')
+
+firstThreeUsers <- r$'Result Set'[c(1,6,11),'userid']
+for (i in firstThreeUsers) {
+  print(paste0("Recommendations for user ", i))
+  print(r$'Result Set'[r$'Result Set'$userid == i,])
+}
+```
+
+## Make Recommendations with KNN Models
+The first step for working with a k-nearest neighbors model is to calculate the similarity between users or between items. For this example the similarity between users is calculated. 
+
+```{r recomSim}
+cas.recommend.recomSim(s,
+  table="ratings_by_user",     # Use the userid to partition table, for each user,
+  label='similar_users',       # compute similarity using item as a vector.
+  system='bookRecommend',
+  id ='userid',
+  sparseId="isbn",                                                 
+  sparseVal="rating",
+  measure='cos',
+  casOut=list(name='similar_users', replace=TRUE),
+  threshold=0.2)
+
+one_users_ratings <- function(u) {
+  r <- cas.fedSql.execDirect(s,
+      query=paste0(
+    'select t1.*,
+    t2.author, t2.title from ratings_by_user as t1
+    left outer join books as t2 on (t1.isbn = t2.isbn)
+    where t1.userid = ', u, '
+    order by t2.author, t2.isbn;'))
+
+    r$'Result Set'
+}
+
+print(one_users_ratings(104437))
+print(one_users_ratings(199981))
+```
+## Create a KNN Model Based on Users’ Similarity
+
+```{r recomKnnTrain}
+cas.recommend.recomKnnTrain(ratings_by_item,
+  label='knn1',
+  system='bookRecommend',
+  similarity='similar_users',
+  k=20,                                                           # 1
+  hold='holdout_users',
+  rateinfo='avg_user',
+  user=TRUE)                                                      # 2
+
+# View recommendations for one user
+users <- '104437'
+
+cas.recommend.recomKnnScore(s,
+  system="bookRecommend",
+  model="knn1",
+  userList=users,
+  n=10,
+  cacheAll=TRUE,
+  casOut=list(name="knn_recommend", replace=TRUE))
+
+
+cas.fedSql.execDirect(s,
+    query='select t1.*,
+      t2.author, t2.title,
+      t3._stat_ as "Average Rating", t3._nratings_ as "Number of Ratings"
+      from knn_recommend as t1
+      left outer join books as t2 on (t1.isbn = t2.isbn)
+      left outer join avg_item as t3 on (t1.isbn = t3.isbn)
+      order by userid, _rank_;')
+```
+
+## Combine Search with Recommendations
+By combining search with your models, you can build a personalized search recommendation engine. 
+
+First, build the search index. The recomSearchIndex action generates a global-scope table that is named the same as the label parameter. The generated index table is always appended when recomSearchIndex is run again with the same label. This can generate duplicate documents in the index table. To avoid duplicates, the dropTable action is run first. The quiet=True parameter is used to ignore whether the table exists or not. 
+
+Afterward, run search queries for terms. 
+
+```{r recomSearchIndex}
+# Build the search index
+cas.table.dropTable(s, table="book_search", quiet=TRUE)
+cas.recommend.recomSearchIndex(s,
+                               system='bookRecommend',
+                               table=list(name='books', vars=c('author', 'publisher', 'title')),
+                               model='book_search',
+                               id='isbn')
+
+# Create a query filter table
+yoga_query <- 'yoga fitness'
+
+cas.recommend.recomSearchQuery(s,
+                               system='bookRecommend',
+                               model='book_search',
+                               casOut=list(name='query_filter', replace=TRUE),
+                               query=yoga_query,
+                               n=100)
+
+cas.table.columnInfo(s, table="query_filter")
+
+# Make recommendations from the filtered query table
+yoga_reader <- '99955';
+
+cas.recommend.recomMfScore(s,
+  system='bookRecommend',
+  model='als1',
+  filter='query_filter',
+  userList = yoga_reader,
+  n=5,
+  casOut=list(name="filtered_results", replace=TRUE))
+
+cas.fedSql.execDirect(s,
+    query='select t1.*,
+      t2.author, t2.title,
+      t3._stat_ as "Average Rating", t3._nratings_ as "Number of Ratings"
+      from filtered_results as t1
+      left outer join books as t2 on (t1.isbn = t2.isbn)
+      left outer join avg_item as t3 on (t1.isbn = t3.isbn)
+      order by userid, _rank_;')
+```
+
+Data were used with permission from Dr. Cai-Nicolas Ziegler. The following publication provides information about the dataset:
+
+Improving Recommendation Lists Through Topic Diversification Cai-Nicolas Ziegler, Sean M. McNee, Joseph A. Konstan, Georg Lausen; _Proceedings of the 14th International World Wide Web Conference (WWW '05)_, May 10-14, 2005, Chiba, Japan. To appear.
