@@ -1,0 +1,224 @@
+<PMML version="4.2" xmlns="http://www.dmg.org/PMML-4_2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.dmg.org/PMML-4_2 http://www.dmg.org/v4-2/pmml-4-2.xsd">
+ <Header copyright="Copyright (c) 2018 sas" description="R Model">
+  <Extension name="user" value="sas" extender="PMML"/>
+  <Application name="PMML" version="1.4"/>
+  <Timestamp>2018-04-04 13:15:40</Timestamp>
+ </Header>
+ <DataDictionary numberOfFields="13">
+  <DataField name="BAD" optype="categorical" dataType="string">
+   <Value value="0"/>
+   <Value value="1"/>
+  </DataField>
+  <DataField name="LOAN" optype="continuous" dataType="double"/>
+  <DataField name="MORTDUE" optype="continuous" dataType="double"/>
+  <DataField name="VALUE" optype="continuous" dataType="double"/>
+  <DataField name="REASON" optype="categorical" dataType="string">
+   <Value value=""/>
+   <Value value="DebtCon"/>
+   <Value value="HomeImp"/>
+  </DataField>
+  <DataField name="JOB" optype="categorical" dataType="string">
+   <Value value=""/>
+   <Value value="Mgr"/>
+   <Value value="Office"/>
+   <Value value="Other"/>
+   <Value value="ProfExe"/>
+   <Value value="Sales"/>
+   <Value value="Self"/>
+  </DataField>
+  <DataField name="YOJ" optype="continuous" dataType="double"/>
+  <DataField name="DEROG" optype="continuous" dataType="double"/>
+  <DataField name="DELINQ" optype="continuous" dataType="double"/>
+  <DataField name="CLAGE" optype="continuous" dataType="double"/>
+  <DataField name="NINQ" optype="continuous" dataType="double"/>
+  <DataField name="CLNO" optype="continuous" dataType="double"/>
+  <DataField name="DEBTINC" optype="continuous" dataType="double"/>
+ </DataDictionary>
+ <TreeModel modelName="RPart_Model" functionName="classification" algorithmName="rpart" splitCharacteristic="binarySplit" missingValueStrategy="defaultChild" noTrueChildStrategy="returnLastPrediction">
+  <MiningSchema>
+   <MiningField name="BAD" usageType="predicted"/>
+   <MiningField name="LOAN" usageType="active"/>
+   <MiningField name="MORTDUE" usageType="active"/>
+   <MiningField name="VALUE" usageType="active"/>
+   <MiningField name="REASON" usageType="active"/>
+   <MiningField name="JOB" usageType="active"/>
+   <MiningField name="YOJ" usageType="active"/>
+   <MiningField name="DEROG" usageType="active"/>
+   <MiningField name="DELINQ" usageType="active"/>
+   <MiningField name="CLAGE" usageType="active"/>
+   <MiningField name="NINQ" usageType="active"/>
+   <MiningField name="CLNO" usageType="active"/>
+   <MiningField name="DEBTINC" usageType="active"/>
+  </MiningSchema>
+  <Output>
+   <OutputField name="Predicted_BAD" optype="categorical" dataType="string" feature="predictedValue"/>
+   <OutputField name="Probability_0" optype="continuous" dataType="double" feature="probability" value="0"/>
+   <OutputField name="Probability_1" optype="continuous" dataType="double" feature="probability" value="1"/>
+  </Output>
+  <Node id="1" score="0" recordCount="5960" defaultChild="2">
+   <True/>
+   <ScoreDistribution value="0" recordCount="4771" confidence="0.800503355704698"/>
+   <ScoreDistribution value="1" recordCount="1189" confidence="0.199496644295302"/>
+   <Node id="2" score="0" recordCount="4750" defaultChild="4">
+    <CompoundPredicate booleanOperator="surrogate">
+     <SimplePredicate field="DELINQ" operator="lessThan" value="0.5"/>
+     <SimplePredicate field="CLNO" operator="lessThan" value="47.5"/>
+    </CompoundPredicate>
+    <ScoreDistribution value="0" recordCount="4095" confidence="0.862105263157895"/>
+    <ScoreDistribution value="1" recordCount="655" confidence="0.137894736842105"/>
+    <Node id="4" score="0" recordCount="4700" defaultChild="8">
+     <SimplePredicate field="DEBTINC" operator="lessThan" value="45.6569"/>
+     <ScoreDistribution value="0" recordCount="4095" confidence="0.871276595744681"/>
+     <ScoreDistribution value="1" recordCount="605" confidence="0.128723404255319"/>
+     <Node id="8" score="0" recordCount="4568">
+      <SimplePredicate field="LOAN" operator="greaterOrEqual" value="5050"/>
+      <ScoreDistribution value="0" recordCount="4026" confidence="0.881348511383538"/>
+      <ScoreDistribution value="1" recordCount="542" confidence="0.118651488616462"/>
+     </Node>
+     <Node id="9" score="0" recordCount="132" defaultChild="18">
+      <SimplePredicate field="LOAN" operator="lessThan" value="5050"/>
+      <ScoreDistribution value="0" recordCount="69" confidence="0.522727272727273"/>
+      <ScoreDistribution value="1" recordCount="63" confidence="0.477272727272727"/>
+      <Node id="18" score="0" recordCount="77">
+       <CompoundPredicate booleanOperator="surrogate">
+        <SimplePredicate field="MORTDUE" operator="greaterOrEqual" value="45250"/>
+        <SimplePredicate field="VALUE" operator="greaterOrEqual" value="55700"/>
+        <SimpleSetPredicate field="JOB" booleanOperator="isIn">
+         <Array n="5" type="string">&quot;&quot; &quot;Mgr&quot; &quot;Office&quot; &quot;ProfExe&quot; &quot;Sales&quot;</Array>
+        </SimpleSetPredicate>
+        <SimplePredicate field="CLNO" operator="greaterOrEqual" value="9.5"/>
+        <SimplePredicate field="LOAN" operator="greaterOrEqual" value="2850"/>
+        <SimplePredicate field="YOJ" operator="lessThan" value="9.5"/>
+       </CompoundPredicate>
+       <ScoreDistribution value="0" recordCount="56" confidence="0.727272727272727"/>
+       <ScoreDistribution value="1" recordCount="21" confidence="0.272727272727273"/>
+      </Node>
+      <Node id="19" score="1" recordCount="55">
+       <CompoundPredicate booleanOperator="surrogate">
+        <SimplePredicate field="MORTDUE" operator="lessThan" value="45250"/>
+        <SimplePredicate field="VALUE" operator="lessThan" value="55700"/>
+        <SimpleSetPredicate field="JOB" booleanOperator="isIn">
+         <Array n="2" type="string">&quot;Other&quot; &quot;Self&quot;</Array>
+        </SimpleSetPredicate>
+        <SimplePredicate field="CLNO" operator="lessThan" value="9.5"/>
+        <SimplePredicate field="LOAN" operator="lessThan" value="2850"/>
+        <SimplePredicate field="YOJ" operator="greaterOrEqual" value="9.5"/>
+       </CompoundPredicate>
+       <ScoreDistribution value="0" recordCount="13" confidence="0.236363636363636"/>
+       <ScoreDistribution value="1" recordCount="42" confidence="0.763636363636364"/>
+      </Node>
+     </Node>
+    </Node>
+    <Node id="5" score="1" recordCount="50">
+     <SimplePredicate field="DEBTINC" operator="greaterOrEqual" value="45.6569"/>
+     <ScoreDistribution value="0" recordCount="0" confidence="0"/>
+     <ScoreDistribution value="1" recordCount="50" confidence="1"/>
+    </Node>
+   </Node>
+   <Node id="3" score="0" recordCount="1210" defaultChild="6">
+    <CompoundPredicate booleanOperator="surrogate">
+     <SimplePredicate field="DELINQ" operator="greaterOrEqual" value="0.5"/>
+     <SimplePredicate field="CLNO" operator="greaterOrEqual" value="47.5"/>
+    </CompoundPredicate>
+    <ScoreDistribution value="0" recordCount="676" confidence="0.558677685950413"/>
+    <ScoreDistribution value="1" recordCount="534" confidence="0.441322314049587"/>
+    <Node id="6" score="0" recordCount="1120" defaultChild="12">
+     <SimplePredicate field="DELINQ" operator="lessThan" value="4.5"/>
+     <ScoreDistribution value="0" recordCount="669" confidence="0.597321428571429"/>
+     <ScoreDistribution value="1" recordCount="451" confidence="0.402678571428571"/>
+     <Node id="12" score="0" recordCount="1016" defaultChild="24">
+      <SimplePredicate field="NINQ" operator="lessThan" value="3.5"/>
+      <ScoreDistribution value="0" recordCount="650" confidence="0.639763779527559"/>
+      <ScoreDistribution value="1" recordCount="366" confidence="0.360236220472441"/>
+      <Node id="24" score="0" recordCount="995" defaultChild="48">
+       <SimplePredicate field="DEBTINC" operator="lessThan" value="43.57059"/>
+       <ScoreDistribution value="0" recordCount="650" confidence="0.653266331658291"/>
+       <ScoreDistribution value="1" recordCount="345" confidence="0.346733668341709"/>
+       <Node id="48" score="0" recordCount="916" defaultChild="96">
+        <SimplePredicate field="LOAN" operator="greaterOrEqual" value="6050"/>
+        <ScoreDistribution value="0" recordCount="627" confidence="0.684497816593887"/>
+        <ScoreDistribution value="1" recordCount="289" confidence="0.315502183406114"/>
+        <Node id="96" score="0" recordCount="878" defaultChild="192">
+         <CompoundPredicate booleanOperator="surrogate">
+          <SimplePredicate field="DEROG" operator="lessThan" value="2.5"/>
+          <SimplePredicate field="CLNO" operator="lessThan" value="50.5"/>
+         </CompoundPredicate>
+         <ScoreDistribution value="0" recordCount="616" confidence="0.701594533029613"/>
+         <ScoreDistribution value="1" recordCount="262" confidence="0.298405466970387"/>
+         <Node id="192" score="0" recordCount="830">
+          <CompoundPredicate booleanOperator="surrogate">
+           <SimplePredicate field="CLAGE" operator="greaterOrEqual" value="75.83871"/>
+           <SimplePredicate field="CLNO" operator="greaterOrEqual" value="4.5"/>
+          </CompoundPredicate>
+          <ScoreDistribution value="0" recordCount="600" confidence="0.72289156626506"/>
+          <ScoreDistribution value="1" recordCount="230" confidence="0.27710843373494"/>
+         </Node>
+         <Node id="193" score="1" recordCount="48">
+          <CompoundPredicate booleanOperator="surrogate">
+           <SimplePredicate field="CLAGE" operator="lessThan" value="75.83871"/>
+           <SimplePredicate field="CLNO" operator="lessThan" value="4.5"/>
+          </CompoundPredicate>
+          <ScoreDistribution value="0" recordCount="16" confidence="0.333333333333333"/>
+          <ScoreDistribution value="1" recordCount="32" confidence="0.666666666666667"/>
+         </Node>
+        </Node>
+        <Node id="97" score="1" recordCount="38">
+         <CompoundPredicate booleanOperator="surrogate">
+          <SimplePredicate field="DEROG" operator="greaterOrEqual" value="2.5"/>
+          <SimplePredicate field="CLNO" operator="greaterOrEqual" value="50.5"/>
+         </CompoundPredicate>
+         <ScoreDistribution value="0" recordCount="11" confidence="0.289473684210526"/>
+         <ScoreDistribution value="1" recordCount="27" confidence="0.710526315789474"/>
+        </Node>
+       </Node>
+       <Node id="49" score="1" recordCount="79" defaultChild="98">
+        <SimplePredicate field="LOAN" operator="lessThan" value="6050"/>
+        <ScoreDistribution value="0" recordCount="23" confidence="0.291139240506329"/>
+        <ScoreDistribution value="1" recordCount="56" confidence="0.708860759493671"/>
+        <Node id="98" score="0" recordCount="28">
+         <CompoundPredicate booleanOperator="surrogate">
+          <SimplePredicate field="CLNO" operator="greaterOrEqual" value="22.5"/>
+          <SimplePredicate field="CLAGE" operator="greaterOrEqual" value="151.033333333333"/>
+          <SimplePredicate field="YOJ" operator="greaterOrEqual" value="8.75"/>
+          <SimplePredicate field="VALUE" operator="greaterOrEqual" value="68447"/>
+          <SimplePredicate field="DELINQ" operator="greaterOrEqual" value="2.5"/>
+          <SimplePredicate field="LOAN" operator="greaterOrEqual" value="5700"/>
+         </CompoundPredicate>
+         <ScoreDistribution value="0" recordCount="20" confidence="0.714285714285714"/>
+         <ScoreDistribution value="1" recordCount="8" confidence="0.285714285714286"/>
+        </Node>
+        <Node id="99" score="1" recordCount="51">
+         <CompoundPredicate booleanOperator="surrogate">
+          <SimplePredicate field="CLNO" operator="lessThan" value="22.5"/>
+          <SimplePredicate field="CLAGE" operator="lessThan" value="151.033333333333"/>
+          <SimplePredicate field="YOJ" operator="lessThan" value="8.75"/>
+          <SimplePredicate field="VALUE" operator="lessThan" value="68447"/>
+          <SimplePredicate field="DELINQ" operator="lessThan" value="2.5"/>
+          <SimplePredicate field="LOAN" operator="lessThan" value="5700"/>
+         </CompoundPredicate>
+         <ScoreDistribution value="0" recordCount="3" confidence="0.0588235294117647"/>
+         <ScoreDistribution value="1" recordCount="48" confidence="0.941176470588235"/>
+        </Node>
+       </Node>
+      </Node>
+      <Node id="25" score="1" recordCount="21">
+       <SimplePredicate field="DEBTINC" operator="greaterOrEqual" value="43.57059"/>
+       <ScoreDistribution value="0" recordCount="0" confidence="0"/>
+       <ScoreDistribution value="1" recordCount="21" confidence="1"/>
+      </Node>
+     </Node>
+     <Node id="13" score="1" recordCount="104">
+      <SimplePredicate field="NINQ" operator="greaterOrEqual" value="3.5"/>
+      <ScoreDistribution value="0" recordCount="19" confidence="0.182692307692308"/>
+      <ScoreDistribution value="1" recordCount="85" confidence="0.817307692307692"/>
+     </Node>
+    </Node>
+    <Node id="7" score="1" recordCount="90">
+     <SimplePredicate field="DELINQ" operator="greaterOrEqual" value="4.5"/>
+     <ScoreDistribution value="0" recordCount="7" confidence="0.0777777777777778"/>
+     <ScoreDistribution value="1" recordCount="83" confidence="0.922222222222222"/>
+    </Node>
+   </Node>
+  </Node>
+ </TreeModel>
+</PMML>
