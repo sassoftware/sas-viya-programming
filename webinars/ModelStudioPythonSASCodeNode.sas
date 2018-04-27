@@ -2,7 +2,7 @@
 %_dmcas_addToClasspath(/opt/opensource/bin);
 %let WORK_DIR = /opt/opensource;
 %let PYTHON_EXEC_COMMAND = /opt/anaconda3/bin/python;
-%let PYTHON_SCRIPT = hmeq.py;
+%let PYTHON_SCRIPT = ModelStudioPython.py;
 
 data _null_; 
    length rtn_val 8; 
