@@ -150,8 +150,8 @@ run;
 
 proc sgplot data=mycas.ts;
    title "Times Series of Crime and Arrest";
-   series x=date y=_sum_ / legendlabel='Arrests' connectorder=xaxis;
-   series x=date y=_nobs_ / legendlabel='Reported Crimes' connectorder=xaxis;
+   series x=date y=_sum_ / legendlabel='Arrests';
+   series x=date y=_nobs_ / legendlabel='Reported Crimes';
 run;
 
 /*Crime Incidents by Hardship Index*/
