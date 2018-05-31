@@ -1,0 +1,153 @@
+---
+title: "Yelp_GRU_blog"
+author: "Yue Qi"
+date: "May 11, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Import SWAT Package
+
+```{r cars}
+library("swat")
+```
+
+## Connect to CAS Server and Load CAS Actionsets
+
+
+```{r pressure, echo=TRUE}
+conn = CAS('rdcgrd001.unx.sas.com', port = 45243)
+
+cas.sessionProp.setSessOpt(conn, caslib='HPS')
+loadActionSet(conn, 'deepLearn')
+loadActionSet(conn, 'castmine')
+loadActionSet(conn, 'fedsql')
+```
+
+## Load Data Sets - Training Data, Validation Data, and Test Data
+
+```{r pressure, echo=FALSE}
+out <- cas.table.loadTable(conn, path = 'yelp_review_train.sashdat',
+                           casout = list(replace = TRUE))
+train <- defCasTable(conn, out$tableName)
+out <- cas.table.loadTable(conn, path = 'yelp_review_val.sashdat', 
+                           casout = list(replace = TRUE))
+val <- defCasTable(conn, out$tableName)
+out <- cas.table.loadTable(conn, path = 'yelp_review_test.sashdat', 
+                           casout = list(replace = TRUE))
+test <- defCasTable(conn, out$tableName)
+cas.table.tableInfo(conn)
+```
+
+## What's in the Table
+
+```{r pressure, echo=FALSE}
+#head(train)
+```
+
+## Load Word Encoding Files
+
+```{r pressure, echo=FALSE}
+# GloVe: Global Vectors for Word Representation. GloVe is an unsupervised learning algorithm for obtaining vector 
+# representations for words. Training is performed on aggregated global word-word co-occurrence statistics from a corpus, 
+# and the resulting representations showcase interesting linear substructures of the word vector space.
+
+
+out <- cas.table.loadTable(conn, path = 'glove_100d_tab_clean.sashdat', 
+                           casout = list(name = "glove",replace = TRUE))
+
+
+```
+
+## Building a Gated Recurrent Unit Model Architecture
+
+```{r pressure, echo=FALSE}
+# Sentiment classification
+# In this example, GRU model is used as specified by the option "rnnType". You can specify other layer types "LSTM" and "RNN".
+# In some layers, reverse = True is specified, and that makes GRU bi-directional. Specifically, layers rnn11 and rnn 21 
+# are in the reverse direction, which means the model scan the sentence from the end to the beginning, while rnn12 and rnn22 are
+# in the common forward direction. Therefore, the state of a neuron is not only affected by the previous words, but also the 
+# words after the neuron.
+
+n=64
+init='msra'
+
+cas.deepLearn.buildModel(conn, model=list(name='sentiment', replace=TRUE), type='RNN')
+
+cas.deepLearn.addLayer(conn,
+  model='sentiment', name='data', layer=list(type='input'))
+
+cas.deepLearn.addLayer(conn,
+  model='sentiment', name='rnn11', srclayers=list('data'),
+  layer=list(type='recurrent',n=n,init=init,rnnType='GRU',
+             outputType='samelength', reverse=TRUE))
+cas.deepLearn.addLayer(conn,
+  model='sentiment', name='rnn12', srclayers=list('data'),
+  layer=list(type='recurrent',n=n,init=init,rnnType='GRU',
+             outputType='samelength', reverse=FALSE))
+
+cas.deepLearn.addLayer(conn,
+  model='sentiment', name='rnn21', srclayers=list('rnn11', 'rnn12'),
+  layer=list(type='recurrent',n=n,init=init,rnnType='GRU',
+             outputType='samelength', reverse=TRUE))
+cas.deepLearn.addLayer(conn,
+  model='sentiment', name='rnn22', srclayers=list('rnn11', 'rnn12'),
+  layer=list(type='recurrent',n=n,init=init,rnnType='GRU',
+             outputType='samelength', reverse=FALSE))
+
+cas.deepLearn.addLayer(conn,
+  model='sentiment', name='rnn3', srclayers=list('rnn21', 'rnn22'),
+  layer=list(type='recurrent',n=n,init=init,rnnType='GRU',
+             outputType='encoding'))
+         
+cas.deepLearn.addLayer(conn,
+  model='sentiment', name='outlayer', srclayers=list('rnn3'),
+           layer=list(type='output'))
+
+
+```
+
+## Training the Model
+
+```{r pressure, echo=FALSE}
+cas.deepLearn.dlTrain(conn,
+  table=train, model='sentiment', validtable=val,
+  modelWeights=list(name='sentiment_trainedWeights', replace=TRUE),
+  textParms=list(initEmbeddings='glove', hasInputTermIds=FALSE, embeddingTrainable=FALSE),
+  target='sentiment', 
+  inputs='review',
+  texts='review', 
+  nominals='sentiment',
+  optimizer=list(miniBatchSize=4, maxEpochs=20, 
+                 algorithm=list(method='adam', beta1=0.9, beta2=0.999, gamma=0.5,
+                                learningRate=0.0005,clipGradMax=100, clipGradMin=-100,
+                                stepSize=20, lrPolicy='step')
+                 ),
+  seed=12345
+)
+
+```
+
+
+```{r pressure, echo=FALSE}
+
+cas.table.save(table='sentiment_trainedWeights', caslib='casuser',
+               name='demo_review_sentiment_trainedweights.sashdat', replace=TRUE,
+               saveAttrs = TRUE)
+```
+
+## Scoring Test Data
+
+```{r pressure, echo=FALSE}
+
+cas.deepLearn.dlScore(
+  table=test, model='sentiment', initWeights='sentiment_trainedWeights',
+  copyVars=list('review', 'sentiment'), textParms=list(initInputEmbeddings='glove'),
+  casout=list(name='sentiment_out', replace=TRUE)
+  )
+
+
+```
