@@ -19,9 +19,9 @@ library("swat")
 
 
 ```{r pressure, echo=TRUE}
-conn = CAS('rdcgrd001.unx.sas.com', port = 45243)
+conn = CAS('example.host.name', port = 5570)
 
-cas.sessionProp.setSessOpt(conn, caslib='HPS')
+cas.sessionProp.setSessOpt(conn, caslib='yourCasLib')
 loadActionSet(conn, 'deepLearn')
 loadActionSet(conn, 'castmine')
 loadActionSet(conn, 'fedsql')
