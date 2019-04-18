@@ -15,6 +15,7 @@ Sample Data
 -----------
 The sample data for the example is the Book-Crossing data set. The data set includes
 explicit ratings. The sample programs use the explicit ratings for developing the system.
+The files can be downloaded from <http://www2.informatik.uni-freiburg.de/~cziegler/BX/>.
 
 Data were used with permission from Dr. Cai-Nicolas Ziegler.  The following 
 publication provides information about the dataset:
