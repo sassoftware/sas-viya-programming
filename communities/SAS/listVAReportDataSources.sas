@@ -38,6 +38,12 @@ Warranty Analysis,eb897d90-e4fd-4bdf-a764-b61af5c339b8
 ;
 run;
 
+/* Sort Dataset by ID */
+proc sort data=reportList;
+by ID;
+run;
+
+
 
 /* -------------------------------------------------------------- */
 /*                  Begin Macro Definition                        */
