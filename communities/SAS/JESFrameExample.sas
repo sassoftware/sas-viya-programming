@@ -28,7 +28,7 @@
 \******************************************************************************/
 *ProcessBody;
 
-												   
+%let BASE_URI=%sysfunc(getoption(servicesbaseurl));
 %macro main;
 
   %global reqtype _odsstyle;
@@ -42,7 +42,7 @@ data _null_;
   file _webout;
 
   thissrv = "&_URL";
-  thispgm = "&_program";
+  thispgm = urlencode("&_program");
 
   put '<html>';
   put '<table>';
@@ -78,8 +78,8 @@ data _null_;
   set summary end=alldone;
   file _webout;
   if _n_ = 1 then do;
-  thissrv = "&_URL";
-  thispgm = "&_program";
+     thissrv = "&_URL";
+     thispgm = "&_program";
      put '<html>';
      put '<h3>Student Report</h3>';
      put '<FORM ACTION="'  thissrv +(-1) '" method=get  target="frame2">';
@@ -87,7 +87,6 @@ data _null_;
           thispgm +(-1) '">';
      put '<input type="hidden" name=reqtype value="report">';
      put '<input type="hidden" name=_ODSDEST value="html">';
-															
      put '<b>Select Age: </b>';
      put '<select name="age">';
   end;
@@ -104,14 +103,20 @@ data _null_;
 
  run;
 
+%mend create_selection;
+
 %macro create_report;   /* Produce the report */
 
   %let _odsstyle=BarrettsBlue;
+
+			
 
   Title "Students who are age &age";
   proc print data = sashelp.class noobs;
     where age = &age;
   run;
+
+		  
 
 %mend create_report;
 
