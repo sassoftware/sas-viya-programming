@@ -15,11 +15,13 @@
 *
 * Author: Michael Drutar
 *
-* This is a SAS Job Execution Service version of the following go.documentation.sas.com example:
+* This is a SAS Job Execution Service version of the following example from the
+* product documentation:
+*
 * https://go.documentation.sas.com/?cdcId=jobexeccdc&cdcVersion=2.2&docsetId=jobexecug&docsetTarget=n0qo7wn74c7mxjn0z46prg7xtakd.htm&locale=en#p0izfftsr05kf6n1barcj6t2pxid
 *
-* Output: HTML Output Which allows users to submit a SAS® Viya Job request in an HTML 
-*         prompt and displays the output in a DIV tag
+* Output: HTML Output that allows users to submit a SAS Viya Job request in an HTML 
+*         prompt and displays the output in a DIV tag.
 *
 * All code must be saved as part of a SAS Viya Job definition.  The job must 
 * be executed with the parameter _action=form,execute

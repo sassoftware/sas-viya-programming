@@ -15,61 +15,70 @@
 *
 * Author: Michael Drutar
 *
-* This is a SAS Job Execution Service version of the following go.documentation.sas.com example:
+* This is a SAS Job Execution Service version of the following example from the
+* product documentation:
+*
 * https://go.documentation.sas.com/?cdcId=jobexeccdc&cdcVersion=2.2&docsetId=jobexecug&docsetTarget=n0qo7wn74c7mxjn0z46prg7xtakd.htm&locale=en#p0izfftsr05kf6n1barcj6t2pxid
 * 
-* Notes: the "<-JES Job Full Path->" value on line 36 must be repalced with the full path to the JES Job
+* Notes: The "<-JES Job Full Path->" value on line 40 must be replaced with the
+*        full path to the JES Job.
 * 	Example "/Public/JES_Example/PromptAndDisplay"
-* Output: HTML Output Which allows users to submit a SAS® Viya Job request in an HTML 
-*         prompt and displays the output in a DIV tag
+* Output: HTML Output that allows users to submit a SAS Viya Job request in an HTML 
+*         prompt and displays the output in a DIV tag.
 *
 * All code must be saved as part of a SAS Viya Job definition.  The job must 
 * be executed with the parameter _action=form,execute
 -->
 
 <html>
+
 <head>
-<script>
-function submitForm() {
-var formData = new FormData();
-formData.append("genderParameter", document.querySelector('[name="genderSelect"]').value);
-formData.append("_program", "<-JES Job Full Path->");
-formData.append("_action", "execute");
-formData.append('_csrf' , "$CSRF$");
+	<script>
+		function submitForm() {
+			var formData = new FormData();
+			formData.append("genderParameter", document.querySelector('[name="genderSelect"]').value);
+			formData.append("_program", "<-JES Job Full Path->");
+			formData.append("_action", "execute");
+			formData.append('_csrf', "$CSRF$");
 
-var request = new XMLHttpRequest();
-request.addEventListener("error", function(event) {
-alert("Something went wrong.");
-});
-request.onreadystatechange = function() {
-if (this.readyState == 4) {
-if (this.status == 200) {
-document.getElementById("JobResults").innerHTML = this.responseText;
-}
-else {
-document.getElementById("JobResults").innerHTML = "Status: " + this.status;
-}
-}
-};
-request.open("post", "/SASJobExecution/");
-request.send(formData);
+			var request = new XMLHttpRequest();
+			request.addEventListener("error", function (event) {
+				alert("Something went wrong.");
+			});
+			request.onreadystatechange = function () {
+				if (this.readyState == 4) {
+					if (this.status == 200) {
+						document.getElementById("JobResults").innerHTML = this.responseText;
+					}
+					else {
+						document.getElementById("JobResults").innerHTML = "Status: " + this.status;
+					}
+				}
+			};
+			request.open("post", "/SASJobExecution/");
+			request.send(formData);
 
-// Display a temporary message in the DIV
-document.getElementById("JobResults").innerHTML = "Please wait ... ";
-}
-</script>
+			// Display a temporary message in the DIV
+			document.getElementById("JobResults").innerHTML = "Please wait ... ";
+		}
+	</script>
 </head>
+
 <body>
-<H2>Please select a gender: </H2>
-<p>
-<form action="javascript:submitForm();">
-	<select name="genderSelect">
-		<OPTION VALUE="M">Males
-		<OPTION VALUE="F">Females
-	</select>
-	</nbsp></nbsp>
-	<input type="submit">
-</form>
-<center><div id="JobResults"></div></center>
+	<H2>Please select a gender: </H2>
+	<p>
+		<form action="javascript:submitForm();">
+			<select name="genderSelect">
+				<OPTION VALUE="M">Males
+				<OPTION VALUE="F">Females
+			</select>
+			</nbsp>
+			</nbsp>
+			<input type="submit">
+		</form>
+		<center>
+			<div id="JobResults"></div>
+		</center>
 </body>
+
 </html>
