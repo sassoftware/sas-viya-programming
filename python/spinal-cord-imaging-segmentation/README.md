@@ -38,5 +38,4 @@ for the trained model is provided by the Apache License.
 
 - <https://github.com/sassoftware/python-dlpy>
 
-- [https://go.documentation.sas.com/?cdcId=pgmsascdc&cdcVersion=9.4_3.5&docsetId=casactml&docsetTarget=casactml_biomedimage_toc.htm&locale=en](bioMedImage
-  action set documentation)
+- [bioMedImage action set documentation](https://go.documentation.sas.com/?cdcId=pgmsascdc&cdcVersion=9.4_3.5&docsetId=casactml&docsetTarget=casactml_biomedimage_toc.htm&locale=en)
