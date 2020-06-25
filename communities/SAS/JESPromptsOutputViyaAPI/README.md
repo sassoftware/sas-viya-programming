@@ -6,21 +6,21 @@ When the job is called, it first shows some custom HTML.  Within this HTML page 
 
 The following animation shows this example JES job in action:
 
-![Sample HTML form](./executingJESUsingJavaScript.gif)
+![Sample HTML form](./JES_API_Final.gif)
 
 This directory contains the resources that you need to recreate this example:
 
 - A JSON file that contains the completed JES Job,
-  `executingJESUsingJavaScript.json`.
+  `JESPromptsOutputViyaAPI.json`.
 
   A SAS administrator can import the job into a SAS Viya 3.5 (or later)
   environment using
   [these instructions](https://go.documentation.sas.com/?docsetId=calpromotion&docsetTarget=n0djzpossyj6rrn1vvi1wfvp2qhp.htm&docsetVersion=3.5&locale=en#p1h997oay4wsjon1uby6m99zzhsx).
 
 - The JES job's SAS source code to create the ODS output,
-  `executingJESUsingJavaScript.sas`.
+  `JESPromptsOutputViyaAPI.sas`.
 - The JES job's HTML code to create prompts and execute the job,
-  `executingJESUsingJavaScript.html`.
+  `JESPromptsOutputViyaAPI.html`.
 
 Save all the code in a SAS Job Execution Web Application 2.2 job definition
 within a Viya 3.5 environment. The job must be executed with the parameter:
