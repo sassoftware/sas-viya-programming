@@ -1,6 +1,6 @@
 # Creating JES Prompts and Output Using the Viya Reports API
 
-One of the best features of the [SAS Viya Job Execution Service](https://go.documentation.sas.com/?cdcId=jobexeccdc&cdcVersion=2.2&docsetId=jobexecug&docsetTarget=titlepage.htm&locale=en#p0izfftsr05kf6n1barcj6t2pxid) is the ability to interact with the Viya Rest APIs.  This example incorporats request calls to the Viya Reports API from both the JES's custom HTML as well as the JES's source code.  
+One of the best features of the [SAS Viya Job Execution Service](https://go.documentation.sas.com/?cdcId=jobexeccdc&cdcVersion=2.2&docsetId=jobexecug&docsetTarget=titlepage.htm&locale=en#p0izfftsr05kf6n1barcj6t2pxid) is the ability to interact with the Viya Rest APIs.  This example incorporates request calls to the Viya Reports API from both the JES's custom HTML as well as the JES's source code.  
 
 When the job is called, it first shows some custom HTML.  Within this HTML page an XMLHttpRequest request to the Viya Reports API to get a list of the ten most recently created Visual Analytics reports in the Viya environment.  The response from the API is then used to populate an HTML drop down from which the user can make a selection.  After the user makes their selection it will be passed to the job's SAS code and another request is made to the Viya Reports API to get the visual elements that are contained within the report.  Finally, we will display a table of only the Graph type elements to the user.
 
