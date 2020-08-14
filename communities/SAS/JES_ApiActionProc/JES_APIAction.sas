@@ -74,6 +74,8 @@ run;
 			If T1;
 			by reportCasLib reportCasTable;
 	keep reportCasLib reportCasTable state;
+	if state='' then state='unloaded';
+	else state=state;
 	run;
 
 %mend getLoadedTables;
@@ -148,9 +150,8 @@ run;
 					by reportCasLib reportCasTable;
 			keep reportCasLib reportCasTable state Name Rows Columns Compressed;
 			run;
-
-			
-			
+			cas myses terminate;
+		
 			%mend getTableInfo;
 			
 			data getReportDataSourcesExe;
@@ -190,12 +191,11 @@ run;
 				end;
 				if state='unloaded' then do;
 				call define('_c3_', 'style','style={background=red}');
+				call define('_c4_', 'style','style={ foreground=white}');
+				call define('_c5_', 'style','style={ foreground=white}');
 				call define('_c6_', 'style','style={ foreground=white}');
-				call define('_c7_', 'style','style={ foreground=white}');
-				call define('_c10_', 'style','style={ foreground=white}');
 				end;
 				endcomp;
 			run; 
-			cas myses terminate;
  %end;
 
