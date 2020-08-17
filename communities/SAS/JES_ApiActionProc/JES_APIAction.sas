@@ -21,9 +21,12 @@
 *
 \******************************************************************************/
 
+/* Environment Setup */
 * Base URI for the service call;
 %let BASE_URI=%sysfunc(getoption(servicesbaseurl));
 
+
+/* API Call to the relationships service to retrieve the VA report's data sources */
 filename rep_ds temp;
 
 proc http url="&BASE_URI/relationships/relationships/?resourceUri=/reports/reports/&JESParameter"
@@ -45,10 +48,12 @@ set rep_ds.items;
 	keep reportCasLib reportCasTable caslibEndpoint;
 run;
 
+/* sort the output data table */
 proc sort data=getReportDataSources;
 	by reportCasLib reportCasTable;
 run;
 
+/* This macro makes an API request to the CAS Management API to determine if each table is loaded into CAS */
 %macro getLoadedTables(caslibURI);
 
 	filename clibinfo temp;
@@ -80,29 +85,37 @@ run;
 
 %mend getLoadedTables;
 
+/* get a distict list of caslibs for the VA report's data sources */
 proc sql;
 	create table reportCaslibs as select distinct caslibEndpoint from getReportDataSources;
 quit;
 
+/* run the getLoadedTables macro  */
 data _NULL_;
 	set reportCaslibs;
 	call execute('%getLoadedTables(' || trim(caslibEndpoint) || ')');
 run;
 
+/* get a list of onlt the tables that are currently loaded */
 data getReportDataSourcesCheck;
 	set getReportDataSources;
 	where state="loaded";
 run;
 
-
+/* get the row count */
 data _NULL_;
 	if 0 then set getReportDataSourcesCheck(where=(state='loaded')) nobs=n;
 	call symputx('nrows',n);
 	stop;
 run;
 
+/* This conditional logic checks to see if any observations were in the table getReportDataSourcesCheck.   */
+/* If no tables are loaded, it simply prints out the table as is using PROC REPORT.  */
+/* If at least one table is loaded, it runs CAS actions on each table, saves the results and then prints out those */
+/* results using PROC REPORT */
+
  %if &nrows=0 %then %do;
-	/* Print the results! */
+	/* No Tables are Loaded.  Simply print the results! */
 	title "The Report's Data Source(s) are Listed Below"; 
 	proc report data=getReportDataSources nowd missing;
 		columns reportCasLib reportCasTable state flag;
@@ -122,9 +135,12 @@ run;
 
  %end;
  %else %do;
+ 	/* There is at least one table loaded.  Run CAS Actions! */
+	/* This macro runs a cas action on each table saves the results */
 	%macro getTableInfo(reportCasLib,reportCasTable);
+			/*	create cas session */
 			cas myses;
-			ods exclude all; 
+			/* run tableinfo action and save results*/
 			proc cas;
 			table.tableInfo result=S 
 			caslib="&reportCasLib"
@@ -132,7 +148,6 @@ run;
 			val = findtable(s);
 			saveresult val dataout=work.casTableInfo;
 			run;
-			ods exclude none; 
 			
 			data casTableInfo;
 			set casTableInfo;
@@ -143,17 +158,19 @@ run;
 			proc sort data=casTableInfo;
 			by reportCasLib reportCasTable;
 			run;
-			
+			/* merge casTableInfo into main reporting dataset */
 			Data getReportDataSources;
 				Merge getReportDataSources(in=T1) casTableInfo(in=T2);
 					If T1;
 					by reportCasLib reportCasTable;
 			keep reportCasLib reportCasTable state Name Rows Columns Compressed;
 			run;
+			/* terminate the cas session */
 			cas myses terminate;
 		
 			%mend getTableInfo;
 			
+			/* create getReportDataSourcesExe and dynamically run sas code using call execute */
 			data getReportDataSourcesExe;
 			set getReportDataSources;
 			length code $ 1000;
@@ -165,13 +182,15 @@ run;
 			set getReportDataSourcesExe;
 			call execute(code);
 			run;
-
+			
+			/* Add formatting to the compress variable */
 			data getReportDataSources;
 			set getReportDataSources;
 			if compressed=1 then compressDesc = "Yes";
 			else if compressed=0 then compressDesc = "No";
 			run;
 
+			/* Print the results! */
 			title "The Report's Data Source Details are Listed Below"; 
 			proc report data=getReportDataSources nowd missing;
 				columns reportCasLib reportCasTable state Columns Rows compressDesc flag;
@@ -198,4 +217,3 @@ run;
 				endcomp;
 			run; 
  %end;
-
