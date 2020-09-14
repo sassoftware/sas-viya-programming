@@ -19,5 +19,4 @@ Watch the video to see the flow of the demo.
 
 ## Additional Information
 
--   [Older version](https://smportal.sas.com/products/demos/Pages/Accelerate_Modeling_VP.aspx) of the project can be viewed at Sales & Marketing Portal
 -   python requirements are specified in Requirements.txt
