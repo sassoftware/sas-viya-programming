@@ -1,6 +1,6 @@
 # Automate Modeling at Scale with SAS Viya
 
-[![Automate Modeling at Scale with SAS Viya]automateCapture.png)](https://players.brightcove.net/3665946608001/default_default/index.html?videoId=6152651615001 "Automate Modeling at Scale with SAS Viya")
+[![Automate Modeling at Scale with SAS Viya](automateCapture.png)](https://players.brightcove.net/3665946608001/default_default/index.html?videoId=6152651615001 "Automate Modeling at Scale with SAS Viya")
 
 Watch the video to see the flow of the demo.
 
