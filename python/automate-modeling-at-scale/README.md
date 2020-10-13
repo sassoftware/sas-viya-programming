@@ -2,7 +2,7 @@
 
 ![Test Image 1](automate.png)
 
-Watch the video to see the flow of the demo.
+Download the video to see the flow of the demo.
 
 ![Sample Video](AutomateModelingSASViya.mp4)
 
