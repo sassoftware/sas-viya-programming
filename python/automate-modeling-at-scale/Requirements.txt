@@ -24,7 +24,7 @@ scikit-learn==0.22.2.post1
 scipy==1.4.1
 swat==1.6.1
 tensorboard==2.1.1
-tensorflow==2.1.0
+tensorflow==2.1.2
 tensorflow-estimator==2.1.0
 xgboost==1.0.2
 pzmm==1.0
