@@ -48,7 +48,7 @@ Dd you know that JES developers can also make use of the Viya procedures?  In th
 
 This Repo's second example example add additional functionality to the example from above.  Specifically, we will add an additional prompt to the user interface asking the user if they would like to retrieve cardinality information for the report's datasets that are currently loaded into memory.  If the user chooses to do this, the program will then run PROC CARDINALITY and return the results at the bottom of the output!  The completed application will look like this:
 
-![Sample HTML form](./JES_APIAction.gif)
+![Sample HTML form](./apiActionProc.gif)
 
 This directory contains the resources that you need to re-create this example:
 - A JSON file containing the completed JES Job, `JES_APIActionProc.json`.
