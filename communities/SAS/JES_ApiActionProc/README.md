@@ -1,4 +1,4 @@
-# Job Execution Service Example: Using SAS Viya APIs CAS Actions and Viya Procedures to Retrieve Details About Visual Analytics Report Data Sources
+# Job Execution Service Example: Using SAS Viya APIs, CAS Actions and Viya Procedures to Retrieve Details About Visual Analytics Report Data Sources
 
 One of the things I like best about creating applications in the
 [SAS Viya Job Execution Service](https://go.documentation.sas.com/?cdcId=jobexeccdc&cdcVersion=2.2&docsetId=jobexecug&docsetTarget=titlepage.htm&locale=en#p0izfftsr05kf6n1barcj6t2pxid)
