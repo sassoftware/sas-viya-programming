@@ -46,7 +46,7 @@ within a SAS Viya 3.5 environment. The job must be executed with the parameter:
 
 This Repo's second example example add additional functionality to the example from above.  The following features are included in this example:
 
-- First, add an additional prompt to the user interface asking the user if they would like to retrieve cardinality information for the report's datasets that are currently loaded into memory
+- Adding an additional prompt to the user interface asking the user if they would like to retrieve cardinality information for the report's datasets that are currently loaded into memory
 - If the user chooses to do this, the program will then run PROC CARDINALITY and return the results at the bottom of the output
 
 The completed application will look like this:
