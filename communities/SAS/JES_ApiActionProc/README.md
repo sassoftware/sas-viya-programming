@@ -44,9 +44,12 @@ within a SAS Viya 3.5 environment. The job must be executed with the parameter:
 
 ### Example #2: Using Viya Procedures to Retrieve Additional Details About a Visual Analytics Report Data Source(s):
 
-Did you know that JES developers can also make use of the Viya procedures?  In this example, we will be using a Viya procedure to add additional functionality to the example from above.  Specifically, we will add an additional prompt to the user interface asking the user if they would like to retrieve cardinality information for the report's datasets that are currently loaded into memory.  If the user chooses to do this, the program will then run PROC CARDINALITY and return the results at the bottom of the output!  The completed application will look like this:
+This Repo's second example example add additional functionality to the example from above.  The following features are included in this example:
 
-This Repo's second example example add additional functionality to the example from above.  Specifically, we will add an additional prompt to the user interface asking the user if they would like to retrieve cardinality information for the report's datasets that are currently loaded into memory.  If the user chooses to do this, the program will then run PROC CARDINALITY and return the results at the bottom of the output!  The completed application will look like this:
+- First, add an additional prompt to the user interface asking the user if they would like to retrieve cardinality information for the report's datasets that are currently loaded into memory
+- If the user chooses to do this, the program will then run PROC CARDINALITY and return the results at the bottom of the output
+
+The completed application will look like this:
 
 ![Sample HTML form](./apiActionProc.gif)
 
