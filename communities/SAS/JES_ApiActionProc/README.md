@@ -68,4 +68,7 @@ Save all the code in a SAS Job Execution Web Application 2.2 job definition
 within a SAS Viya 3.5 environment. The job must be executed with the parameter:
 `_action=form,execute`.
 
+---
+
+*The code in this repo is intended to be run against VA reports which have been developed using the Visual Analytics interface using loaded CAS data sets as the data source(s).  Results might vary when selecting preinstalled VA reports or VA reports created via other methods.*
 
