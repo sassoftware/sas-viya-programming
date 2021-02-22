@@ -13,7 +13,7 @@ and even run
 
 ### Example #1: Using SAS Viya APIs and CAS Actions to Retrieve Details About Visual Analytics Report Data Source(s):
 
-- First, the job prompts enable users to select a Visual Analytics report from a
+- First, the job prompts users to select a Visual Analytics report from a
   drop-down menu.
 - After a selection is made, the job uses API calls to retrieve a listing of the
   report's data sources and determine whether those data sources are currently
@@ -44,7 +44,7 @@ within a SAS Viya 3.5 environment. The job must be executed with the parameter:
 
 ### Example #2: Using Viya Procedures to Retrieve Additional Details About a Visual Analytics Report Data Source(s):
 
-This Repo's second example example add additional functionality to the example from above.  The following features are included in this example:
+This Repo's second example adds additional functionality to the example from above.  The following features are included in this example:
 
 - Adding an additional prompt to the user interface asking the user if they would like to retrieve cardinality information for the report's datasets that are currently loaded into memory
 - If the user chooses to do this, the program will then run PROC CARDINALITY and return the results at the bottom of the output
