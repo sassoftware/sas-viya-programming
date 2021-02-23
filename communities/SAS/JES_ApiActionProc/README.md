@@ -1,4 +1,4 @@
-# Job Execution Service Example: Using SAS Viya APIs and CAS Actions to Retrieve Details About Visual Analytics Report Data Sources
+# Job Execution Service Example: Using SAS Viya APIs, CAS Actions and Viya Procedures to Retrieve Details About Visual Analytics Report Data Sources
 
 One of the things I like best about creating applications in the
 [SAS Viya Job Execution Service](https://go.documentation.sas.com/?cdcId=jobexeccdc&cdcVersion=2.2&docsetId=jobexecug&docsetTarget=titlepage.htm&locale=en#p0izfftsr05kf6n1barcj6t2pxid)
@@ -9,9 +9,11 @@ services, use the powerful
 and even run
 [SAS Viya procedures](https://go.documentation.sas.com/?docsetId=pgmdiff&docsetTarget=n16pcp93f99tsen11ks9rgnongpw.htm&docsetVersion=3.5&locale=en)!
 
-This repository contains an example JES job that performs the following steps:
+## This repository contains two example JES jobs.  
 
-- First, the job prompts enable users to select a Visual Analytics report from a
+### Example #1: Using SAS Viya APIs and CAS Actions to Retrieve Details About Visual Analytics Report Data Source(s):
+
+- First, the job prompts users to select a Visual Analytics report from a
   drop-down menu.
 - After a selection is made, the job uses API calls to retrieve a listing of the
   report's data sources and determine whether those data sources are currently
@@ -39,3 +41,34 @@ This directory contains the resources that you need to re-create this example:
 Save all the code in a SAS Job Execution Web Application 2.2 job definition
 within a SAS Viya 3.5 environment. The job must be executed with the parameter:
 `_action=form,execute`.
+
+### Example #2: Using Viya Procedures to Retrieve Additional Details About a Visual Analytics Report Data Source(s):
+
+This Repo's second example adds additional functionality to the example from above.  The following features are included in this example:
+
+- Adding an additional prompt to the user interface asking the user if they would like to retrieve cardinality information for the report's datasets that are currently loaded into memory
+- If the user chooses to do this, the program will then run PROC CARDINALITY and return the results at the bottom of the output
+
+The completed application will look like this:
+
+![Sample HTML form](./apiActionProc.gif)
+
+This directory contains the resources that you need to re-create this example:
+- A JSON file containing the completed JES Job, `JES_APIActionProc.json`.
+
+  A SAS administrator can import the job into a SAS Viya 3.5 (or later)
+  environment using
+  [these instructions](https://go.documentation.sas.com/?docsetId=calpromotion&docsetTarget=n0djzpossyj6rrn1vvi1wfvp2qhp.htm&docsetVersion=3.5&locale=en#p1h997oay4wsjon1uby6m99zzhsx).
+
+- The JES job's source code that makes the API requests, runs the CAS actions and Viya Procedure and displays the ODS output, `JES_APIActionProc.sas`.
+- The JES job's HTML code to create prompts and execute the job,
+  `JES_APIActionProc.html`.
+
+Save all the code in a SAS Job Execution Web Application 2.2 job definition
+within a SAS Viya 3.5 environment. The job must be executed with the parameter:
+`_action=form,execute`.
+
+---
+
+*The code in this repo is intended to be run against VA reports which have been developed using the Visual Analytics interface using loaded CAS data sets as the data source(s).  Results might vary when selecting preinstalled VA reports or VA reports created via other methods.*
+
