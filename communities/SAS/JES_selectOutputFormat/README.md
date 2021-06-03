@@ -1,4 +1,4 @@
-# Changing JES Web Application Outputs on the Fly
+# Selecting Different JES Web Application Outputs
 
 One common question I get about creating applications using the [Job Execution Service Web Application](https://go.documentation.sas.com/doc/en/jobexeccdc/2.2/jobexecug/titlepage.htm) is if the job's results can be delivered in a different format.  The most popular request is if a JSON file can be returned.  Well, as it turns out it's very easy to do this!  As a matter of fact the Job Execution Service Web Application's documentation has a [specific example](https://go.documentation.sas.com/doc/en/jobexeccdc/2.2/jobexecug/n0t91q5lsc2b8qn14fd0cgbmylr8.htm#n1946clxvisfs1n1evin42sckavo) which shows how to format a Job's results as a JSON file.
 
