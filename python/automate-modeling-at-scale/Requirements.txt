@@ -1,7 +1,7 @@
 imbalanced-learn==0.6.2
 imblearn==0.0
 ipykernel==5.1.0
-ipython==7.3.0
+ipython==7.16.3
 ipython-genutils==0.2.0
 ipywidgets==7.4.2
 joblib==0.14.1
