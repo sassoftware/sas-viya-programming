@@ -5,6 +5,7 @@ As of SAS Viya version 2021.2.4, the new [Visual Analytics API](https://develope
 
 The following animation shows an example of using the API:
 
-![createFullReportImage](./createFullReportImage_prd.gif)
+This directory contains examples of how to use the use the API to create these images of SAS Visual Analytics Report Tabs and Report Objects:
 
-This directory contains examples of how to use the use the API to create these images of SAS Visual Analytics Report Tabs and Report Objects.
+- A SAS program which creates an SVG image file of an entire Visual Analytics Report Tab and saves the file in the private “My Folder” area for the user running the code `createVAFullReportImage.sas`
+- A SAS program which creates an SVG image file of a single report object that exists in a Visual Analytics Report and saves the file in the private “My Folder” area for the user running the code - `createVAReportObjectImage.sas`
