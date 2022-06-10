@@ -5,6 +5,6 @@ As of SAS Viya version 2021.2.4, the new [Visual Analytics API](https://develope
 
 The following animation shows an example of using the API:
 
-![Sample HTML form](./JES_API_Final.gif)
+![createFullReportImage](./createFullReportImage_prd.gif)
 
 This directory contains examples of how to use the use the API to create these images of SAS Visual Analytics Report Tabs and Report Objects.
