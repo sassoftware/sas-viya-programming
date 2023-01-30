@@ -21,8 +21,8 @@ Unless required by applicable law or agreed to in writing, software distributed 
 
 ## Additional Resources 
 - [An Introduction to SAS® Viya® 3.4 Programming](https://go.documentation.sas.com/?cdcId=pgmsascdc&cdcVersion=9.4_3.4&docsetId=pgmdiff&docsetTarget=titlepage.htm&locale=en)
-- [Getting Started with SAS® Viya® 3.4 for Python ](https://go.documentation.sas.com/?cdcId=pgmsascdc&cdcVersion=9.4_3.4&docsetId=caspg3&docsetTarget=titlepage.htm&locale=en)
-- [Getting Started with SAS® Viya® 3.4 for R ](https://go.documentation.sas.com/?cdcId=pgmsascdc&cdcVersion=9.4_3.4&docsetId=caspg3r&docsetTarget=titlepage.htm&locale=en)
+- [Getting Started with SAS® Viya® 4 for Python ](https://documentation.sas.com/?cdcId=pgmsascdc&cdcVersion=default&docsetId=caspg3&docsetTarget=titlepage.htm)
+- [Getting Started with SAS® Viya® 4 for R ](https://documentation.sas.com/?cdcId=pgmsascdc&cdcVersion=default&docsetId=caspg3r&docsetTarget=titlepage.htm)
 
 
 
