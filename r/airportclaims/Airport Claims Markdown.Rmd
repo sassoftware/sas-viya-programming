@@ -15,7 +15,7 @@ Load the SWAT library and then create a connection to the CAS server using the C
 
 ```{r}
 library(swat)
-s <- CAS("rdcgrd310.unx.sas.com", 10065)
+s <- CAS("cloud.example.com", 10065)
 ```
 # Load the Data
 
