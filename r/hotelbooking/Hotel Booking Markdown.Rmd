@@ -1,0 +1,400 @@
+---
+title: "Hotel Booking Demand (R Example)"
+output: html_document
+---
+
+# Overview
+
+The following example demonstrates a data science workflow from start to finish using real world hotel booking demand data. The data files are named H1.csv and H2.csv and can be obtained from https://support.sas.com/documentation/onlinedoc/viya/examples.htm. The data are originally from https://www.sciencedirect.com/science/article/pii/S2352340918315191.
+
+# Load the SWAT Library and Connect to the CAS Server
+
+Load the SWAT library and then create a connection to the CAS server using the CAS function and assign the CAS connection object to the variable s. The first argument specifies the host name, and the second argument specifies the port.
+
+```{r}
+library(swat)
+#change the host and port to match your site
+s <- CAS("rdcgrd310.unx.sas.com", 10065)
+```
+
+# Load the Data
+
+## Load the Data from a Caslib
+
+There are two data files, H1 and H2, that first need to be imported and then combined (appended) together. The default method of loading data is to load the data from the data source portion of a caslib, which is known as a server-side load. This requires the data files to be saved in the active caslib (Casuser). Once the files have been saved to the caslib, use a table.loadTable action for each CSV file to load the data files into memory.
+
+In the importOptions parameter, specify CSV for the fileType.
+For encoding, specify latin1.
+For guessRows, specify a number that includes all rows in the data set, such as 100,000 so that all rows will be scanned to determine the appropriate data type for each column.
+
+```{r}
+cas.table.loadTable(s, 
+                    path="H1.csv",
+                    caslib="casuser",
+                    casOut=list(name="H1",
+                                caslib="casuser",
+                                replace=TRUE),
+                    importOptions=list(fileType="csv",
+                                       encoding="latin1",
+                                       guessRows="100000"))
+```
+
+```{r}
+cas.table.loadTable(s, 
+                    path="H2.csv",
+                    caslib="casuser",
+                    casOut=list(name="H2",
+                                caslib="casuser",
+                                replace=TRUE),
+                    importOptions=list(fileType="csv",
+                                       encoding="latin1",
+                                       guessRows="100000"))
+```
+
+# Explore the Data
+
+## Count the Number of Rows
+
+Count the number of rows in each table. Use the table.recordCount action to verify that the H1 and H2 data files were imported with the correct number of rows. H1 should have 40060 rows, and H2 should have 79,330 rows.
+
+```{r}
+cas.table.recordCount(s, 
+                      table=list(caslib="casuser", 
+                                 name="H1"))
+cas.table.recordCount(s, 
+                      table=list(caslib="casuser",
+                                 name="H2"))
+```
+
+# Examine the Columns
+
+Examine the columns in each table using the table.columnInfo action to make sure the columns have the correct type. The result includes the names of columns, and information about each column, including its label (if applicable), type, length, and format.
+
+```{r}
+cas.table.columnInfo(s, 
+                     table='H1')
+
+cas.table.columnInfo(s, 
+                     table='H2')
+```
+
+
+# Specify Column Type When Loading Data
+
+By default, the "children" column is imported as a double type in table H1 but it is imported as a varchar type in table H2 (due to missing values). The columns in each table need to be the same type for the tables to be appended. Therefore, it is necessary to add a vars subparameter in the loadTable action for H2 to import the children column as a double type. Use the columnInfo action to view the table H2.
+
+```{r}
+cas.table.loadTable(s, 
+                    path="H2.csv",
+                    caslib="casuser",
+                    casOut=list(name="H2",
+                                caslib="casuser",
+                                replace=TRUE),
+                    importOptions=list(fileType="csv",
+                                       encoding="latin1",
+                                       guessRows="10000",
+                                       vars=list(children=list(type="DOUBLE"))))
+
+cas.table.columnInfo(s, 
+                     table="H2")
+```
+The column information for table H2 now correctly specifies that the Children column has a double type.
+
+# Prepare the Data
+
+## Create a New Column to Identify Hotel Type
+
+Table H1 contains booking information about a resort hotel and table H2 contains booking information about a city hotel. Prior to appending the tables, use the table.copyTable action with the computedVars and computedVarsProgram subparameters to create a new column in each table named "hotel" to identify whether the bookings come from the resort hotel or city hotel. Set the values of hotel to "R" in table H1 to represent the resort hotel and "C" in table H2 to represent the city hotel.
+
+```{r}
+cas.table.copyTable(s, 
+                    casOut=list(caslib="casuser", 
+                                name="H1_new", 
+                                replace=TRUE),
+                    table=list(caslib="casuser", 
+                               name="H1", 
+                               computedVars=list("name"="hotel"), 
+                               computedVarsProgram="hotel='R'"))
+
+cas.table.copyTable(s, 
+                    casOut=list(caslib="casuser", 
+                                name="H2_new", 
+                                replace=TRUE),
+                    table=list(caslib="casuser", 
+                               name="H2", 
+                               computedVars=list(name="hotel"), 
+                               computedVarsProgram="hotel='C'"))
+```
+
+# Append the Tables
+
+The next step is to append tables H1 and H2. Use table.append to combine rows from the source table H1 to the target table H2. Use table.alterTable to rename the appended table H2_new to hotel_bookings.
+
+The target parameter specifies H2_new as the table that will have the source table appended to it.
+The source parameter specifies H1_new as the table that will be appended to the target table.
+
+```{r}
+cas.table.append(s, 
+                 target=list(caslib="casuser", 
+                             name="H2_new"),
+                 source=list(caslib="casuser", 
+                             name="H1_new"))
+
+cas.table.alterTable(s, 
+                     name="H2_new", 
+                     caslib="casuser", 
+                     rename="hotel_bookings")
+```
+
+# Examine Column Information and Count Distinct/Missing Values
+
+Check column data types and check for null values. Use columnInfo to check each column's data type. Use simple.distinct to identify the number of distinct values for each column.
+
+```{r}
+cas.table.columnInfo(s, 
+                     table=list(caslib="casuser", 
+                                name="hotel_bookings"))
+
+cas.simple.distinct(s, 
+                    table=list(caslib="casuser", 
+                               name="hotel_bookings"))
+```
+
+The simple.distinct action shows that there are 4 missing values in the Children column.
+
+# Replace Missing Values with Zeros
+
+Use the table.update action to replace missing values in the Children column with zero. Use a simple.distinct action to ensure that there are no missing values.
+
+```{r}
+cas.table.update(s, 
+                 table=list(name="hotel_bookings",
+                            caslib="casuser",
+                            where="Children is null"),
+                 set=list(list(var="Children", 
+                               value="0")))
+
+cas.simple.distinct(s, 
+                    table=list(name="hotel_bookings",
+                               caslib="casuser",
+                               vars=(list(list(name="children")))))
+```
+
+# Subset the Data to Exclude Invalid Rows
+
+Use a table.copyTable action with an expression in the where parameter to subset the rows to keep only the rows where children, adults, or babies are greater than zero. This removes rows where the values of the adults, babies, and children columns are zero, since all three columns cannot be zero. Then use table.recordCount to count the number of rows to see how many cases are now in the subsetted data.
+
+```{r}
+cas.table.copyTable(s, 
+                    table=list(name="hotel_bookings",
+                               where="children > 0 | adults > 0 | babies > 0"),
+                    casOut=list(name="hotel_bookings_subset", 
+                                replace=TRUE))
+
+cas.table.recordCount(s, 
+                      table=list(caslib="casuser", 
+                                 name="hotel_bookings_subset"))
+```
+
+# Analyze the Data
+
+##  Create a Frequency Table
+
+Load the freqTab action set and use the freqTab.freqTab action to create a frequency distribution for country and include only bookings that have not been canceled.
+
+In the order parameter, specify FREQ to sort rows by descending frequency count.
+In the vars subparameter, specify country as the column that the frequencies will be calculated on.
+Use the where subparameter to subset the data so that frequencies are calculated only on bookings that are not canceled.
+
+```{r}
+cas.builtins.loadActionSet(s, actionSet="freqTab")
+
+cas.freqTab.freqTab(s, 
+                    table=list(caslib="casuser",
+                               name="hotel_bookings_subset",
+                               vars=list(list("name"="country")),
+                               where="iscanceled = 0"),
+                    order="FREQ")
+```
+
+# Calculate Summary Statistics by Month and Hotel Type
+
+Examine how the price varies per night over the year. Use simple.summary to calculate the average (mean) daily rate of bookings by month for each hotel type (Resort and City), excluding canceled bookings, and save the results to separate tables based on each hotel type, named "bookings_summary_resort" and "bookings_summary_city". For each simple.summary action:
+
+In the table parameter, specify arrivaldatemonth as the column for the groupBy subparameter so that statistics are calculated for each month in the resulting output table.
+In the where subparameter, specify an expression that selects only bookings that are not canceled and the type of hotel.
+In the inputs parameter, specify adr so that statistics are calculated on this column.
+In the subset parameter, specify MEAN to calculate the mean of the column specified in the inputs parameter, adr.
+
+Use a table.fetch action to fetch the arrivaldatemonth and _Mean_ columns from the output tables. The months are returned in alphabetical order, and will need to be sorted in the correct order.
+
+### Resort Hotel
+```{r}
+cas.simple.summary(s, 
+                   table=list(caslib="casuser",
+                              name="hotel_bookings_subset",
+                              groupBy=list(list("name"="arrivaldatemonth")),
+                              where="iscanceled = 0 & hotel='R'"),
+                   inputs=list("adr"),
+                   subset=list("MEAN"),
+                   casout=list(name="bookings_summary_resort", 
+                               replace=TRUE))
+
+cas.table.fetch(s, 
+                table=list(name="bookings_summary_resort"),
+                fetchVars=list("arrivaldatemonth", 
+                               "_Mean_"))
+```
+
+### City Hotel
+```{r}
+cas.simple.summary(s, 
+                   table=list(caslib="casuser",
+                              name="hotel_bookings_subset",
+                              groupBy=list(list("name"="arrivaldatemonth")),
+                              where="iscanceled = 0 & hotel='C'"),
+                   inputs=list("adr"),
+                   subset=list("MEAN"),
+                   casout=list(name="bookings_summary_city", 
+                               replace=TRUE))
+
+cas.table.fetch(s, 
+                table=list(name="bookings_summary_city"),
+                fetchVars=list("arrivaldatemonth", 
+                               "_Mean_"))
+```
+
+# Sort Results by Month
+
+To display the tables with the month column sorted in order, first use the table.copyTable action with the computedVars and computedVarsProgram parameters to create a numeric column named "monthno" containing the month number for each month based on the value of arrivaldatemonth. The result is saved to a table named "hotel_bookings_subset_monthno". For the simple.summary actions, include monthno in the groupBy parameter so that the fetched tables can be sorted by month number.
+
+```{r}
+cas.table.copyTable(s, 
+                    casout=list(caslib="casuser", 
+                                name="hotel_bookings_subset_monthno", 
+                                replace=TRUE),
+                    table=list(caslib="casuser", 
+                               name="hotel_bookings_subset", 
+                               computedVars=list(list(name="monthno")),
+                               computedVarsProgram="if arrivaldatemonth='January' then monthno=1;
+                                                    else if arrivaldatemonth='February' then monthno=2;
+                                                    else if arrivaldatemonth='March' then monthno=3;
+                                                    else if arrivaldatemonth='April' then monthno=4;
+                                                    else if arrivaldatemonth='May' then monthno=5;
+                                                    else if arrivaldatemonth='June' then monthno=6;
+                                                    else if arrivaldatemonth='July' then monthno=7;
+                                                    else if arrivaldatemonth='August' then monthno=8;
+                                                    else if arrivaldatemonth='September' then monthno=9;
+                                                    else if arrivaldatemonth='October' then monthno=10;
+                                                    else if arrivaldatemonth='November' then monthno=11;
+                                                    else if arrivaldatemonth='December' then monthno=12"))
+```
+
+### Resort Hotel
+```{r}
+cas.simple.summary(s, 
+                   table=list(caslib="casuser",
+                              name="hotel_bookings_subset_monthno",
+                              groupBy=list(list(name="arrivaldatemonth"), 
+                                           (name="monthno"), 
+                                           (name="hotel")),
+                              where="iscanceled = 0 & hotel='R'"),
+                   inputs=list("adr"),
+                   subset=list("MEAN"),
+                   casout=list(name="bookings_summary_resort_monthno", 
+                               replace=TRUE))
+
+cas.table.fetch(s, 
+                table=list(name="bookings_summary_resort_monthno"),
+                fetchVars=list("arrivaldatemonth", 
+                               "_Mean_", 
+                               "hotel"),
+                sortBy=list(list(name="monthno")))
+```
+
+### City Hotel
+```{r}
+cas.simple.summary(s, 
+                   table=list(caslib="casuser",
+                              name="hotel_bookings_subset_monthno",
+                              groupBy=list(list(name="arrivaldatemonth"), 
+                                           (name="monthno"), 
+                                           (name="hotel")),
+                              where="iscanceled = 0 & hotel='C'"),
+                   inputs=list("adr"),
+                   subset=list("MEAN"),
+                   casout=list(name="bookings_summary_city_monthno", 
+                               replace=TRUE))
+
+
+cas.table.fetch(s, 
+                table=list(name="bookings_summary_city_monthno"),
+                fetchVars=list("arrivaldatemonth", 
+                               "_Mean_", 
+                               "hotel"),
+                sortBy=list(list(name="monthno")))
+```
+# Visualize the Data
+
+## Create Line Charts to Visualize Results by Month
+
+The ggplot function from the ggplot2 package can be used to visualize data that has been preprocessed using CAS actions. The function is used here to create line charts that show the average cost of bookings by month for each hotel type. Before creating a plot, it is necessary to first load the tidyverse, janitor, and ggplot2 packages, create a CASTable Object for a CAS Table, convert the CAS Table to a CAS data frame, and then convert the CAS data frame to an R data frame.
+
+```{r}
+library(tidyverse)
+library(janitor)
+library(ggplot2)
+```
+
+### Resort Hotel
+```{r}
+castbl_resort <- defCasTable(s, "bookings_summary_resort_monthno")
+casdf_resort <- to.casDataFrame(castbl_resort, obs=nrow(castbl_resort))
+casdf_resort <- clean_names(casdf_resort)
+df_resort <- data.frame(casdf_resort)
+
+ggplot(data=df_resort, aes(x=reorder(arrival_date_month, monthno), y=mean, group=1)) +
+  geom_line() +
+  labs(x='Month',
+       y='Mean Price Per Night',
+       title='Average Cost of Bookings by Month for Resort Hotel')
+```
+
+### City Hotel
+```{r}
+castbl_city <- defCasTable(s, "bookings_summary_city_monthno")
+casdf_city <- to.casDataFrame(castbl_city, obs=nrow(castbl_city))
+casdf_city <- clean_names(casdf_city)
+df_city <- data.frame(casdf_city)
+
+ggplot(data=df_city, aes(x=reorder(arrival_date_month, monthno), y=mean, group=1)) +
+  geom_line() +
+  labs(x='Month',
+       y='Mean Price Per Night',
+       title='Average Cost of Bookings by Month for City Hotel')
+```
+
+### By Month and Hotel Type
+```{r}
+cas.table.append(s, 
+                 target=list(caslib="casuser",
+                             name="bookings_summary_city_monthno"),
+                 source=list(caslib="casuser",
+                             name="bookings_summary_resort_monthno"))
+
+cas.table.alterTable(s,
+                     name="bookings_summary_city_monthno",
+                     rename="bookings_summary_appended",
+                     caslib="casuser")
+
+castbl_appended <- defCasTable(s, "bookings_summary_appended")
+casdf_appended <- to.casDataFrame(castbl_appended, obs=nrow(castbl_appended))
+casdf_appended <- clean_names(casdf_appended)
+df_appended <- data.frame(casdf_appended)
+
+ggplot(data=df_appended, aes(x=reorder(arrival_date_month, monthno), y=mean, group=hotel, color=hotel)) +
+  geom_line() +
+  labs(x='Month',
+       y='Mean Price Per Night',
+       title='Average Cost of Bookings by Month and Hotel Type')
+```
