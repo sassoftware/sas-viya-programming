@@ -1,1 +1,273 @@
+---
+title: "Aggregating Police Data Records"
+output: html_document
+---
 
+# Overview
+
+The following example demonstrates a data science workflow using real world, publicly available data records on individual police stops from the New York City Police Department in 2019. The Excel (XLSX) data file used for this example can be obtained from https://www1.nyc.gov/assets/nypd/downloads/excel/analysis_and_planning/stop-question-frisk/sqf-2019.xlsx.
+
+This example focuses on the process of aggregating data and reshaping data between long and wide formats.
+
+# Load the SWAT Library and Connect to the CAS Server
+
+Load the SWAT library and then create a connection to the CAS server using the CAS function and assign the CAS connection object to the variable s. The first argument specifies the host name, and the second argument specifies the port.
+
+```{r}
+library(swat)
+# change the host and port to match your site
+s <- CAS("rdcgrd310.unx.sas.com", 10065)
+```
+
+# Load the Data
+
+There are two methods that can be used to load a data file. The first method is to load the data from a caslib (server-side load). The second method is to load the data from a location that is accessible to the CAS server but not associated with a caslib (client-side load).
+
+## Load the Excel Data from a Caslib
+
+The default method of loading data is to load the data from the data source portion of a caslib, which is known as a server-side load. This requires the data file to be saved in the active caslib (Casuser). Once the file has been saved to the caslib, use the table.loadTable action to load the sqf-2019.xlsx Excel file from the data source portion of the caslib into memory as a CAS table named sqf2019.
+
+In the getNames subparameter, specify an argument of True to use the first row as column names.
+In the range subparameter, specify a range of cells that includes all rows in the data.
+
+```{r}
+cas.table.loadTable(s, 
+                    path="sqf-2019.xlsx",                 
+                    casOut=list(name="sqf2019",
+                                replace=TRUE),
+                    importOptions=list(fileType="Excel",           
+                                       getNames=TRUE,            
+                                       sheet="SQF CY 2019",         
+                                       range="SQF CY 2019$A1:CE13460"))
+```
+
+# Explore the Data
+
+Examine the rows and columns in the data.
+
+## Examine the Rows
+
+Use a table.fetch action to retrieve the first 20 rows from the sqf2019 table.
+
+```{r}
+cas.table.fetch(s,
+                table="sqf2019",
+                to=20)
+```
+
+## Examine the Columns
+
+Use the table.columnInfo action to obtain metadata about the table. The result includes the names of columns, and information about each column, including its label (if applicable), type, length, and format. The results show that the columns are the appropriate types.
+
+```{r}
+cas.table.columnInfo(s,
+                     table="sqf2019")
+```
+
+# Prepare the Data
+
+## Aggregate the Wide Data
+
+The data are currently in a wide format with one row for each unique value of the STOP_ID_ANONY column which uniquely identifies observations. The data will need to be aggregated by month (MONTH2), day of week (DAY2), and borough name (STOP_LOCATION_BORO_NAME) columns using the aggregation.aggregate action to show the number of observations (stops) for each unique combination of the values of the variables.
+
+Load the aggregation action set.
+In the groupBy subparameter, specify the columns MONTH2, DAY2, and STOP_LOCATION_BORO_NAME to aggregate on those variables.
+In the varSpecs subparameter, specify STOP_ID_ANONY for the name parameter because this column uniquely identifies rows in the data set.
+In the subset subparameter, specify N to calculate row frequencies based on the nonmissing values of this column.
+
+```{r}
+cas.builtins.loadActionSet(s, 
+                           actionSet="aggregation")
+
+cas.aggregation.aggregate(s,
+                          table=list(name="sqf2019",                                  
+                                     caslib="casuser",
+                          groupBy=list("MONTH2", 
+                                       "DAY2", 
+                                       "STOP_LOCATION_BORO_NAME")),  
+                          varSpecs=list(list(name="STOP_ID_ANONY", 
+                                             subset=list("N"))),
+                                             casOut=list(name="sqfAnalysis",                       
+                                                         caslib="casuser",
+                                                         replace=TRUE))
+```
+
+Use a table.fetch command to view the aggregated data. Each row now represents a group of observations with a unique combination of the values MONTH2, DAY2, and STOP_LOCATION_BORO_NAME, and the count of the number of observations in each group. The data can also be considered as a long data set because there are multiple rows for each unique value of STOP_LOCATION_BORO_NAME. Each row in a group of rows with the same value of STOP_LOCATION_BORO_NAME has a unique combination of the values for DAY2 and MONTH2.
+
+```{r}
+cas.table.fetch(s,
+                table="sqfAnalysis")
+```
+
+## Examine Column Values
+
+Ensure that columns do not contain any unexpected values. Use the simple.freq action to obtain the unique values of the columns. The results show that there are no data errors.
+
+```{r}
+cas.simple.freq(s,
+                table=list(caslib="casuser", 
+                           name="sqfAnalysis"),
+                inputs=list(list(name="DAY2"),
+                            list(name="MONTH2"),
+                            list(name="STOP_LOCATION_BORO_NAME")))
+```
+
+## Reshape Data from Long to Wide
+
+The data can now be reshaped into a wide data file. First, use the simple.groupByInfo action to create a table named orderByTBL that contains the unique values of the STOP_LOCATION_BORO_NAME column. These values are used to provide more descriptive names for the columns created in the reshaped data instead of the default names (for example, Bronx instead of 0, Brooklyn instead of 1, etc.). Fetch the rows from the orderByTBL table.
+
+```{r}
+cas.simple.groupByInfo(s,
+                       noVars=TRUE,
+                       generatedColumns=list("F"),
+                       inputs=list("STOP_LOCATION_BORO_NAME"),
+                       casOut=list(name="orderByTbl",
+                                   replace=TRUE),
+                       table="sqfAnalysis")
+
+cas.table.fetch(s,
+                table="orderByTBL")
+```
+
+Load the dataShaping action set and use the longToWide action to reshape the sqfAnalysis table from long to wide.
+
+For the groupBy subparameter, specify the column MONTH2 and DAY2 as the columns used to define the groups. The values of these columns will be collapsed so that each row in the reshaped data is a group with a unique combination of the values of the two columns.
+
+For the optional groupByMode subparameter, specify REDISTRIBUTE to guarantee ordering within groups.
+
+For the id parameter, specify STOP_LOCATION_BORO_NAME as the column whose unique values will be used to define the columns in the reshaped table.
+
+For the inputs parameter, specify the column containing frequencies, _STOP_ID_ANONY_Summary_NObs_, as the column whose values will be the values of the newly created columns in the reshaped wide table.
+
+Because the STOP_LOCATION_BORO_NAME column specified in the id parameter contains 5 unique values (5 distinct borough names) that are used to create the corresponding columns in the wide data, specify a value of 5 for the maxPosition parameter.
+
+Include the optional orderBytable parameter, specifying the orderByTbl table that contains the unique values of the STOP_LOCATION_BORO_NAME column which are used to provide more descriptive names for the columns created in the reshaped data.
+
+```{r}
+cas.builtins.loadActionSet(s, 
+                           actionSet="dataShaping")      
+
+cas.dataShaping.longToWide(s,
+                           table=list(name="sqfAnalysis",                      
+                                      groupBy=list(list(name="MONTH2"),
+                                                   list(name="DAY2")),
+                                      orderBy="STOP_LOCATION_BORO_NAME",
+                                      groupByMode="REDISTRIBUTE"),
+                           inputs=list("_STOP_ID_ANONY_Summary_NObs_"),    
+                           orderBytable=list(name="orderByTbl"),    
+                           maxPosition=5,
+                           id=list("STOP_LOCATION_BORO_NAME"),                                                             
+                           casout=list(name="sqfWide", 
+                                       replace=TRUE))
+```
+
+```{r}
+cas.table.fetch(s,
+                table="sqfWide",
+                sortBy=list(list(name="MONTH2", order="ASCENDING"),
+                            list(name="DAY2", order="ASCENDING")))
+```
+
+Use the table.fetch action to view the first 20 rows from the reshaped wide table sqfWide, sorting by MONTH2 and DAY2 in ascending order. The result shows that the values of STOP_LOCATION_BORO_NAME column are used as suffixes in the names of newly created columns in the wide data.
+
+## Reshape Data from Wide to Long
+
+The wide data can be reshaped back to long data. Use the wideToLong action to reshape from wide to long.
+
+In the inputs parameter, specify the names of the columns that will become the values stored in a single variable in the reshaped long data that identifies the stop location borough name.
+In the id parameter, specify the columns MONTH2 and DAY2 so that there are multiple rows for each unique combination of the values of those columns. Each row in a group of rows with the same value for MONTH2 and the same value for DAY2 will have a unique value for STOP_LOCATION_BORO_NAME.
+
+```{r}
+cas.builtins.loadActionSet(s, 
+                           actionSet="dataShaping")     
+
+cas.dataShaping.wideToLong(s,
+                           table="sqfWide",                           
+                           inputs=list("_STOP_ID_ANONY_Summary_NObs_BRONX",     
+                                       "_STOP_ID_ANONY_Summary_NObs_BROOKLYN",
+                                       "_STOP_ID_ANONY_Summary_NObs_MANHATTAN",
+                                       "_STOP_ID_ANONY_Summary_NObs_QUEENS",
+                                       "_STOP_ID_ANONY_Summary_NObs_STATEN ISLAND"),
+                           id=list("MONTH2", 
+                                   "DAY2"), 
+                           casout=list(name="sqfLong", 
+                                       replace=TRUE))
+```
+
+Fetch the first 20 rows from the resulting sqfLong table. The resulting table shows there are multiple rows for each unique combination of the values of those columns. For each group of rows created based on a unique combination of the values for MONTH2 and DAY2, there is a separate row for each unique value of the STOP_LOCATION_BORO_NAME.
+
+```{r}
+cas.table.fetch(s,
+                table="sqfLong")
+```
+
+## Clean Column Names
+
+Rename the column names and values so that they are easier to read. Use the table.alterTable action with the columns parameter to rename _Variable_ to Stop_Location_Boro_Name and _Value_ to Frequency. The _C0_ column contains repeats the values of the _Variable_ column and can be dropped.
+
+```{r}
+cas.table.alterTable(s,
+                     name="sqfLong",                                           
+                     caslib="casuser",
+                     columns=list(                                                
+                                  list(name="_Variable_", rename="Stop_Location_Boro_Name"),
+                                  list(name="_Value_", rename="Frequency")
+                                  ),
+                     drop=list("_C0_"))
+```
+
+Use a table.fetch action to view the cleaned table.
+
+```{r}
+cas.table.fetch(s,
+                table="sqfLong")
+```
+
+## Clean Column Values
+
+Rename the column names and values so that they are easier to read. Use the table.alterTable action with the columns parameter to rename _Variable_ to Stop_Location_Boro_Name and _Value_ to Frequency. The _C0_ column contains repeats the values of the _Variable_ column and can be dropped.
+
+```{r}
+cas.table.update(s,
+                 table=list(name="sqfLong",                                         
+                            caslib="casuser",
+                            where="Stop_Location_Boro_Name CONTAINS 'BROOKLYN'"),
+                 set=list(list(var="Stop_Location_Boro_Name", value="'Brooklyn'")))
+
+cas.table.update(s,
+                 table=list(name="sqfLong",                                         
+                            caslib="casuser",
+                            where="Stop_Location_Boro_Name CONTAINS 'BRONX'"),
+                 set=list(list(var="Stop_Location_Boro_Name", value="'Bronx'")))
+
+cas.table.update(s,
+                 table=list(name="sqfLong",                                         
+                            caslib="casuser",
+                            where="Stop_Location_Boro_Name CONTAINS 'MANHATTAN'"),
+                 set=list(list(var="Stop_Location_Boro_Name", value="'Manhattan'")))
+
+cas.table.update(s,
+                 table=list(name="sqfLong",                                         
+                            caslib="casuser",
+                            where="Stop_Location_Boro_Name CONTAINS 'QUEENS'"),
+                 set=list(list(var="Stop_Location_Boro_Name", value="'Queens'")))
+
+cas.table.update(s,
+                 table=list(name="sqfLong",                                         
+                            caslib="casuser",
+                            where="Stop_Location_Boro_Name CONTAINS 'STATEN'"),
+                 set=list(list(var="Stop_Location_Boro_Name", value="'Staten Island'")))
+```
+
+# Analyze the Data
+
+## View and Sort Rows from the Long Table
+
+Use a table.fetch action to fetch 20 rows resulting cleaned sqfLong table, sorted by Frequency in descending order and Stop_Location_Boro_Name in ascending order. The table shows the top 20 combinations of month, day, and borough with the most number of police stops.
+
+```{r}
+cas.table.fetch(s,
+                table="sqfLong",
+                sortBy=list(list(name="Frequency", order="DESCENDING"),
+                            list(name="Stop_Location_Boro_Name", order="ASCENDING")))
+```
