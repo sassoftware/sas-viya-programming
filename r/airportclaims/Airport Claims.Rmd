@@ -15,6 +15,7 @@ Load the SWAT library and then create a connection to the CAS server using the C
 
 ```{r}
 library(swat)
+# change the host and port to match your site
 s <- CAS("cloud.example.com", 10065)
 ```
 # Load the Data
