@@ -1,5 +1,5 @@
 ---
-title: "Hotel Booking Demand (R Example)"
+title: "Hotel Booking Demand"
 output: html_document
 ---
 
@@ -356,8 +356,10 @@ df_resort <- data.frame(casdf_resort)
 ggplot(data=df_resort, aes(x=reorder(arrival_date_month, monthno), y=mean, group=1)) +
   geom_line() +
   labs(x='Month',
-       y='Mean Price Per Night',
-       title='Average Cost of Bookings by Month for Resort Hotel')
+       y='Mean Average Daily Rate',
+       title='Mean Average Daily Rate by Month for Resort Hotel') +
+  theme(axis.text.x = element_text(angle = 70, vjust = 0.5, hjust=0.5))
+ 
 ```
 
 ### City Hotel
@@ -370,8 +372,9 @@ df_city <- data.frame(casdf_city)
 ggplot(data=df_city, aes(x=reorder(arrival_date_month, monthno), y=mean, group=1)) +
   geom_line() +
   labs(x='Month',
-       y='Mean Price Per Night',
-       title='Average Cost of Bookings by Month for City Hotel')
+       y='Mean Average Daily Rate',
+       title='Mean Average Daily Rate by Month for City Hotel') +
+  theme(axis.text.x = element_text(angle = 70, vjust = 0.5, hjust=0.5))
 ```
 
 ### By Month and Hotel Type
@@ -395,6 +398,7 @@ df_appended <- data.frame(casdf_appended)
 ggplot(data=df_appended, aes(x=reorder(arrival_date_month, monthno), y=mean, group=hotel, color=hotel)) +
   geom_line() +
   labs(x='Month',
-       y='Mean Price Per Night',
-       title='Average Cost of Bookings by Month and Hotel Type')
+       y='Mean Average Daily Rate',
+       title='Mean Average Daily Rate by Month and Hotel Type') +
+  theme(axis.text.x = element_text(angle = 70, vjust = 0.5, hjust=0.5))
 ```
