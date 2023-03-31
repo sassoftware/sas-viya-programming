@@ -1,5 +1,5 @@
 ---
-title: "Airport Claims (R Example)"
+title: "Airport Claims"
 output: html_document
 ---
 
@@ -15,7 +15,7 @@ Load the SWAT library and then create a connection to the CAS server using the C
 
 ```{r}
 library(swat)
-# change the host and port to match your site
+#change the host and port to match your site
 s <- CAS("cloud.example.com", 10065)
 ```
 # Load the Data
@@ -48,25 +48,29 @@ cas.table.loadTable(s,
 Another method of loading data into CAS memory is to load the data from an external source that is accessible to the CAS server. This example uses the upload_file function to perform a client-side load.
 
 ```{r}
-result <- cas.upload.file(s,                                                                               
-                          "https://support.sas.com/documentation/onlinedoc/viya/exampledatasets/TSAClaims2002_2017.csv", 
-                          casOut=list(name="tsaclaims", 
-                                      replace=TRUE),
-                          importOptions=list(fileType="CSV",
-                                             encoding="latin1",
-                                             guessrows=300000))
+# cas.upload.file(s,                                                                               
+               # "https://support.sas.com/documentation/onlinedoc/viya/exampledatasets/TSAClaims2002_2017.csv", 
+               #  casOut=list(name="tsaclaims", 
+               #              replace=TRUE),
+               #  importOptions=list(fileType="CSV",
+               #                     encoding="latin1",
+               #                     guessrows=300000))
 ```
 
 # Explore the Data
+
+## Create a Reference the In-Memory Table
+
+```{r}
+tbl <- defCasTable(s, "tsaclaims", caslib="casuser")
+```
 
 ## Examine the Columns
 
 To get information about a table’s columns, use the columnInfo action on the tsaclaims table to obtain metadata about the table. The result includes the names of columns, and information about each column, including its label (if applicable), type, length, and format.
 
 ```{r}
-cas.table.columnInfo(s, 
-                     table=list(caslib="casuser",
-                                name="tsaclaims"))
+cas.table.columnInfo(tbl)
 ```
 
 ## Examine the Rows
@@ -74,9 +78,7 @@ cas.table.columnInfo(s,
 Preview the first few rows of the table by using the table.fetch action and specifying 10 in the to parameter. The sortBy parameter specifies that the column Close_Amount is sorted in descending order. Examine the values in the rows to identify any data issues. In the resulting table, notice that the values in the two date columns (Date_Received and Incident_Date) are 5-digit numbers and are not properly formatted in an MM-DD-YYYY format. In addition, the Close_Amount variable shows values with a missing dollar sign. The columns need to be modified to apply the appropriate date and currency formats.
 
 ```{r}
-cas.table.fetch(s, 
-                table=list(caslib="casuser",
-                           name="tsaclaims"),
+cas.table.fetch(tbl,
                 to=10,
                 sortBy=list(list(name="Close_Amount", order="DESCENDING")))
 ```
@@ -102,7 +104,7 @@ cas.table.alterTable(s,
                                   list(name="Item_Category", label="Item Category"),
                                   list(name="Close_Amount", label="Close Amount")))
 
-cas.table.columnInfo(s, table="tsaclaims")
+cas.table.columnInfo(tbl)
 ```
 
 The resulting table shows that the format for the Date_Received and Incident_Date columns is MMDDYY, and the Close_Amount is DOLLAR.
@@ -112,8 +114,7 @@ The resulting table shows that the format for the Date_Received and Incident_Dat
 Examine the number of unique and missing values for each variable to determine whether further cleaning is needed. Run the simple.distinct action to identify the number of distinct values and the number of missing values for each column.
 
 ```{r}
-cas.simple.distinct(s, 
-                    table="tsaclaims")
+cas.simple.distinct(tbl)
 ```
 
 
@@ -154,17 +155,17 @@ cas.deduplication.deduplicate(s,
                                                 name="tsaclaims_dups", 
                                                 replace=TRUE),
                               noDuplicateKeys=TRUE)
-```
 
+tbl_nodups <- defCasTable(s, "tsaclaims_nodups", caslib="casuser")
+tbl_dups <- defCasTable(s, "tsaclaims_dups", caslib="casuser")
+```
 
 ## Identify Data Quality Issues
 
 A frequency distribution can be used to examine the columns for data issues. The simple.freq action generates a frequency distribution showing the counts of each unique value for each of the variables listed in the inputs parameter. The columns Date_Received and Incident_Date are assigned the format year4. to display the values with a 4-digit year. Columns with options specified (such as a format) need to be enclosed in braces.
 
 ```{r}
-cas.simple.freq(s, 
-                table=list(caslib="casuser", 
-                           name="tsaclaims_nodups"),
+cas.simple.freq(tbl_nodups,
                 inputs=list(list(name="Claim_Site"),
                             list(name="Disposition"),
                             list(name="Claim_Type"),
@@ -179,7 +180,6 @@ The data contains some errors including missing values, inconsistent values and 
 ## Replace Missing and Inconsistent Values 
 
 ```{r}
-
 cas.table.update(s, 
                  table=list(name="tsaclaims_nodups", 
                             caslib="casuser", 
@@ -202,6 +202,7 @@ cas.table.update(s,
                             where="Claim_Type='Property Damage/Personal Injury'"),
                  set=list(list(var="Claim_Type", value="'Property Damage'")))
 
+
 cas.table.update(s, 
                  table=list(name="tsaclaims_nodups", 
                             caslib="casuser", 
@@ -218,6 +219,7 @@ cas.table.update(s,
                             where="Disposition='losed: Contractor Claim'"),
                  set=list(list(var="Disposition", value="'Closed:Contractor Claim'")))
 
+
 cas.table.update(s, 
                  table=list(caslib="casuser",
                             name="tsaclaims_nodups"),
@@ -226,18 +228,13 @@ cas.table.update(s,
 
 ## Generate a frequency distribution to examine the cleaned columns
 ```{r}
-
-cas.simple.freq(s, 
-                table=list(caslib="casuser", 
-                           name="tsaclaims_nodups"),
+cas.simple.freq(tbl_nodups,
                 inputs=list(list(name="Claim_Site"),
                             list(name="Disposition"),
                             list(name="Claim_Type"),
                             list(name="Date_Received", format="year4."),
                             list(name="Incident_Date", format="year4.")))
-cas.simple.freq(s, 
-                table=list(caslib="casuser", 
-                           name="tsaclaims_nodups"),
+cas.simple.freq(tbl_nodups,
                 inputs=list(list(name="State"),
                             list(name="StateName")))
 
@@ -248,7 +245,6 @@ cas.simple.freq(s,
 Create a new column to identify rows that have date values that are out of range (earlier than 2002 or later than 2017). These rows will require further investigation. In the computedVars parameter, specify the name of the new column as Date_Issues. In the computedVarsProgram parameter, write a query to assign a value of ‘Needs Review’ to the Date_Issues variable if the year of the Incident_Date or Date_Received variable falls outside of the range between 2002 and 2017.
 
 ```{r}
-
 cas.table.copyTable(s,
                     casOut=list(caslib="casuser", 
                                 name="tsaclaims_cleaned", 
@@ -262,10 +258,11 @@ cas.table.copyTable(s,
                                                     year(Date_Received) < 2002 or
                                                     year(Date_Received) > 2017 
                                                     then Date_Issues='Needs Review'"))
-cas.simple.freq(s, 
-                table=list(caslib="casuser", 
-                           name="tsaclaims_cleaned"),
-                inputs=list("Date_Issues"))
+
+tbl_clean <- defCasTable(s, tablename="tsaclaims_cleaned", caslib="casuser")
+
+cas.simple.freq(tbl_clean,
+                inputs=list("Date_Issues")) 
 
 ```
 
@@ -275,12 +272,10 @@ cas.simple.freq(s,
 Columns that are no longer needed can be dropped using the table.alterTable action. Here the columns County and City are specified in the drop parameter.
 
 ```{r}
-
 cas.table.alterTable(s,
                      caslib="casuser",
                      name="tsaclaims_cleaned",
                      drop=list("City", "County"))
-
 ```
 
 
@@ -289,22 +284,11 @@ cas.table.alterTable(s,
 Examine the cleaned data using the columnInfo and fetch actions.
 
 ```{r}
+tbl_clean <- defCasTable(s, tablename="tsaclaims_cleaned", caslib="casuser")
 
-cas.simple.freq(s, 
-                table=list(caslib="casuser",
-                           name="tsaclaims_cleaned"),
-                inputs=list("Date_Issues"))
+cas.table.columnInfo(tbl_clean)
 
-cas.simple.freq(s, 
-                table=list(caslib="casuser",
-                           name="tsaclaims_cleaned"),
-                inputs=list(list(name="Incident_Date", 
-                                 format="year4.")),
-                casOut=list(caslib="casuser",
-                            name="tsaclaims_cleaned_freq_date",
-                            replace=TRUE))
-
-
+cas.table.fetch(tbl_clean) 
 ```
 
 # Analyze the Data
@@ -314,30 +298,21 @@ cas.simple.freq(s,
 The simple.freq action can be used to perform analysis to examine the number of date issues and the number of claims per year of Incident_Date in the overall data.
 
 ```{r}
+cas.simple.freq(tbl_clean,
+                inputs=list("Date_Issues"))
 
-cas.simple.freq(s, 
-                table=list(caslib="casuser",
-                           name="tsaclaims_cleaned",
-                           where="StateName='Hawaii' and Date_Issues is null"),
-                inputs=list("Claim_Site", 
-                            "Claim_Type", 
-                            "Disposition"),
+cas.simple.freq(tbl_clean,
+                inputs=list(list(name="Incident_Date", 
+                                 format="year4.")),
                 casOut=list(caslib="casuser",
-                            name="tsaclaims_cleaned_freq_vars",
+                            name="tsaclaims_cleaned_freq_date",
                             replace=TRUE))
-
-cas.simple.summary(s, 
-                   table=list(name="tsaclaims_cleaned", 
-                              where="StateName='Hawaii' and Date_Issues is null"),
-                   inputs=list("Close_Amount"),
-                   subSet=list("N", "MEAN", "MIN", "MAX", "SUM"))
 ```
 
 ## Generate Frequencies and Summary Statistics on a Subset of Data
 
 Here the simple.freq action is used to generate frequency tables to show the number of claims for each Claim_Type, Claim_Site, and Disposition, as well as to calculate the mean, minimum, maximum, and sum of Close_Amount for claims in Hawaii that do not have date issues.
 ```{r}
-
 cas.simple.freq(s, 
                 table=list(caslib="casuser",
                            name="tsaclaims_cleaned",
@@ -351,7 +326,6 @@ cas.simple.summary(s,
                               where="StateName='Hawaii' and Date_Issues is null"),
                    inputs=list("Close_Amount"),
                    subSet=list("N", "MEAN", "MIN", "MAX", "SUM"))
-
 ```
 
 ## Create Bar Charts to Visualize the Results
@@ -360,7 +334,6 @@ The ggplot function from the ggplot2 package can be used to visualize data that 
 
 ### By Year
 ```{r}
-
 library(tidyverse)
 library(janitor)
 library(ggplot2)
@@ -376,14 +349,12 @@ ggplot(data=df_tsa_year, aes(x=fmtvar, y=frequency)) +
   labs(x='Incident Date (Year)',
        y='Number of Claims',
        title='Number of Claims by Year')
-
 ```
 
 Here the ggplot function is used multiple times to create bar charts showing the number of claims by claim site, claim type, and disposition.
 
 ### By Claim Site
 ```{r}
-
 cas.simple.freq(s, 
                 table=list(caslib="casuser",
                            name="tsaclaims_cleaned",
@@ -403,12 +374,10 @@ ggplot(data=df_tsa_claim_site, aes(x=reorder(fmtvar, -frequency), y=frequency)) 
   labs(x='Claim Site',
        y='Number of Claims',
        title='Number of Claims by Claim Site in Hawaii')
-
 ```
 
 ### By Claim Type
 ```{r}
-
 cas.simple.freq(s, 
                 table=list(caslib="casuser",
                            name="tsaclaims_cleaned",
@@ -429,12 +398,10 @@ ggplot(data=df_tsa_claim_type, aes(x=reorder(fmtvar, -frequency), y=frequency)) 
        y='Number of Claims',
        title='Number of Claims by Claim Type in Hawaii') +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
-
 ```
 
 ### By Disposition
 ```{r}
-
 cas.simple.freq(s, 
                 table=list(caslib="casuser",
                            name="tsaclaims_cleaned",
@@ -455,3 +422,4 @@ ggplot(data=df_tsa_disposition, aes(x=reorder(fmtvar, -frequency), y=frequency))
        y='Number of Claims',
        title='Number of Claims by Disposition in Hawaii') +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+```
