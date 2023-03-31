@@ -341,7 +341,7 @@ library(ggplot2)
 castbl_tsa_year <- defCasTable(s, "tsaclaims_cleaned_freq_date")
 casdf_tsa_year <- to.casDataFrame(castbl_tsa_year, obs=nrow(castbl_tsa_year))
 casdf_tsa_year <- clean_names(casdf_tsa_year)
-df_tsa_year = data.frame(casdf_tsa_year)
+df_tsa_year <- data.frame(casdf_tsa_year)
 df_tsa_year <- filter(df_tsa_year, numvar!="NaN")
 
 ggplot(data=df_tsa_year, aes(x=fmtvar, y=frequency)) +
