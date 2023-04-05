@@ -15,7 +15,6 @@ Load the SWAT library and then create a connection to the CAS server using the C
 
 ```{r}
 library(swat)
-# change the host and port to match your site
 s <- CAS("cloud.example.com", 10065)
 ```
 
@@ -46,26 +45,32 @@ cas.table.loadTable(s,
 Another method of loading data into CAS memory is to load the data from an external source that is accessible to the CAS server. This example uses the upload_file function to perform a client-side load.
 
 ```{r}
-result <- cas.upload.file(s,                                                                               
-                          "https://data-openjustice.doj.ca.gov/sites/default/files/dataset/2022-08/VCASC2000-2021.csv", 
-                          casOut=list(name="vcasc", 
-                                      replace=TRUE),
-                          importOptions=list(fileType="CSV",
-                                             encoding="latin1",
-                                             guessrows=200000))
+#result <- cas.upload.file(s,                                                                               
+#                          "https://data-openjustice.doj.ca.gov/sites/default/files/dataset/2022-08/VCASC2000-2021.csv", 
+#                          casOut=list(name="vcasc", 
+#                                      replace=TRUE),
+#                          importOptions=list(fileType="CSV",
+#                                             encoding="latin1",
+#                                             guessrows=200000))
 ```                                             
 
 # Explore the Data
 
 Examine the rows and columns in the data.
 
+## Reference CAS Table
+
+```{r}
+tbl <- defCasTable(s, "vcasc", caslib="casuser")
+```
+
+
 ## Examine the Rows
 
 The table.fetch action can be used to retrieve a specified number of rows from the data. Here, the parameter n=20 is specified, which indicates that the first 20 rows are retrieved. The fetch action shows that the data is presented in a long format, where monthly crime counts reported by each agency (NCIC_AGENCY_CODE) are distributed across multiple rows rather than multiple columns. (For example, for each unique reporting agency, there is a separate row for each month of the year with the counts of each crime type reported for that month.)
 
 ```{r}
-cas.table.fetch(s,
-                table="vcasc",
+cas.table.fetch(tbl,
                 to=20)
 ```
 
@@ -74,8 +79,7 @@ cas.table.fetch(s,
 Use the table.columnInfo action to obtain metadata about the table. The result includes the names of columns, and information about each column, including its label (if applicable), type, length, and format. The results show that the columns are the appropriate types.
 
 ```{r}
-cas.table.columnInfo(s,
-                     table="vcasc")
+cas.table.columnInfo(tbl)
 ```
 
 ## Identify Unique Values of the Year Column
@@ -83,8 +87,7 @@ cas.table.columnInfo(s,
 Examine the YEAR column using a simple.freq to create a frequency distribution showing the unique values of year. The result shows that data are available for the years 2000 to 2021.
 
 ```{r}
-cas.simple.freq(s,
-                table="vcasc",
+cas.simple.freq(tbl,
                 inputs=list("Year"))
 ```
 
@@ -124,8 +127,8 @@ cas.builtins.loadActionSet(s, actionSet="dataShaping")
 
 cas.dataShaping.longToWide(s,                        
                            table=list(name="vcasc",                      
-                           groupBy="NCIC_AGENCY_CODE",
-                           groupByMode="REDISTRIBUTE"),
+                                      groupBy="NCIC_AGENCY_CODE",
+                                      groupByMode="REDISTRIBUTE"),
                            inputs=list("SUB_ROBBERY"),      
                            sum=list("SUB_ROBBERY"),
                            mean=list("SUB_ROBBERY"),
@@ -133,29 +136,28 @@ cas.dataShaping.longToWide(s,
                            id=list("MONTH"),                                                             
                            casout=list("name"="vcascWide", 
                                        "replace"=TRUE))
+
+tbl_wide <- defCasTable(s, "vcascWide", caslib="casuser")
 ```
 
 Use the table.fech action to view the first 10 rows of the reshaped table vcascWide. The reshaped table now shows only a single row for each unique value of NCIC_AGENCY_CODE with each of the unique values of the MONTH column defining the column names. (For example, month 1 is SUB_ROBBERY_0, month 2 is SUB_ROBBERY_1, and so on.) The values of the SUB_ROBBERY column are stored in the columns that correspond to the unique values of the MONTH column.
 
 ```{r}
-cas.table.fetch(s,
-                table="vcascWide",
+cas.table.fetch(tbl_wide,
                 to=10)
 ```
 
 Examine the data to confirm that there is now only 1 row for each distinct value. Use the simple.distinct action to count the distinct values of the groupBy column (NCIC_AGENCY_CODE).
 
 ```{r}
-cas.simple.distinct(s,
-                    table="vcascWide",
+cas.simple.distinct(tbl_wide,
                     inputs=list(list(name="NCIC_AGENCY_CODE")))
 ```
 
 Use the table.recordCount action to count the number of rows in the data. The resulting count matches the number of distinct values of NCIC_AGENCY_CODE.
 
 ```{r}
-cas.table.recordCount(s,
-                      table="vcascWide")
+cas.table.recordCount(tbl_wide)
 ```
 
 ## Clean the Reshaped Table
@@ -193,13 +195,14 @@ cas.table.alterTable(s,
                      name="vcascWide",                                        
                      caslib="casuser",
                      columnOrder=list("NCIC_AGENCY_CODE"))
+
+tbl_wide <- defCasTable(s, "vcascWide", caslib="casuser")
 ```
 
 Use a table.fetch action to view the cleaned table. The table now shows the NCIC_AGENCY_CODE column first and each of the reshaped monthly count columns has been renamed according to the month that it represents. The table also includes the columns Average and Total containing the calculated statistics.
 
 ```{r}
-cas.table.fetch(s,
-                table="vcascWide",
+cas.table.fetch(tbl_wide,
                 index=FALSE)
 ```
 
@@ -225,6 +228,7 @@ Show the top 10 reporting agencies with the highest total number of robberies. U
 ```{r}
 cas.table.fetch(s,
                 table="vcascWideType",
+                caslib="casuser",
                 to=10,
                 sortBy=list(list(name="Total", order="DESCENDING")))
 ```
