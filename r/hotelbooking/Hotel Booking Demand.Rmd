@@ -53,17 +53,20 @@ cas.table.loadTable(s,
 
 # Explore the Data
 
+## Reference the In-Memory Tables
+
+```{r}
+tbl_1 <- defCasTable(s, "H1", caslib="casuser")
+tbl_2 <- defCasTable(s, "H2", caslib="casuser")
+```
+
 ## Count the Number of Rows
 
 Count the number of rows in each table. Use the table.recordCount action to verify that the H1 and H2 data files were imported with the correct number of rows. H1 should have 40060 rows, and H2 should have 79,330 rows.
 
 ```{r}
-cas.table.recordCount(s, 
-                      table=list(caslib="casuser", 
-                                 name="H1"))
-cas.table.recordCount(s, 
-                      table=list(caslib="casuser",
-                                 name="H2"))
+cas.table.recordCount(tbl_1)
+cas.table.recordCount(tbl_2)
 ```
 
 # Examine the Columns
@@ -71,11 +74,9 @@ cas.table.recordCount(s,
 Examine the columns in each table using the table.columnInfo action to make sure the columns have the correct type. The result includes the names of columns, and information about each column, including its label (if applicable), type, length, and format.
 
 ```{r}
-cas.table.columnInfo(s, 
-                     table='H1')
+cas.table.columnInfo(tbl_1)
 
-cas.table.columnInfo(s, 
-                     table='H2')
+cas.table.columnInfo(tbl_2)
 ```
 
 
@@ -95,8 +96,9 @@ cas.table.loadTable(s,
                                        guessRows="10000",
                                        vars=list(children=list(type="DOUBLE"))))
 
-cas.table.columnInfo(s, 
-                     table="H2")
+tbl_2 <- defCasTable(s, "H2", caslib="casuser")
+
+cas.table.columnInfo(tbl_2)
 ```
 The column information for table H2 now correctly specifies that the Children column has a double type.
 
@@ -124,6 +126,9 @@ cas.table.copyTable(s,
                                name="H2", 
                                computedVars=list(name="hotel"), 
                                computedVarsProgram="hotel='C'"))
+
+tbl_1_new <- defCasTable(s, "H1_new", caslib="casuser")
+tbl_2_new <- defCasTable(s, "H2_new", caslib="casuser")
 ```
 
 # Append the Tables
@@ -144,6 +149,8 @@ cas.table.alterTable(s,
                      name="H2_new", 
                      caslib="casuser", 
                      rename="hotel_bookings")
+
+tbl_hotel_bookings <- defCasTable(s, "hotel_bookings", caslib="casuser")
 ```
 
 # Examine Column Information and Count Distinct/Missing Values
@@ -151,13 +158,9 @@ cas.table.alterTable(s,
 Check column data types and check for null values. Use columnInfo to check each column's data type. Use simple.distinct to identify the number of distinct values for each column.
 
 ```{r}
-cas.table.columnInfo(s, 
-                     table=list(caslib="casuser", 
-                                name="hotel_bookings"))
+cas.table.columnInfo(tbl_hotel_bookings)
 
-cas.simple.distinct(s, 
-                    table=list(caslib="casuser", 
-                               name="hotel_bookings"))
+cas.simple.distinct(tbl_hotel_bookings)
 ```
 
 The simple.distinct action shows that there are 4 missing values in the Children column.
@@ -191,9 +194,9 @@ cas.table.copyTable(s,
                     casOut=list(name="hotel_bookings_subset", 
                                 replace=TRUE))
 
-cas.table.recordCount(s, 
-                      table=list(caslib="casuser", 
-                                 name="hotel_bookings_subset"))
+tbl_subset <- defCasTable(s, "hotel_bookings_subset", caslib="casuser")
+
+cas.table.recordCount(tbl_subset)
 ```
 
 # Analyze the Data
@@ -240,8 +243,9 @@ cas.simple.summary(s,
                    casout=list(name="bookings_summary_resort", 
                                replace=TRUE))
 
-cas.table.fetch(s, 
-                table=list(name="bookings_summary_resort"),
+tbl_resort <- defCasTable(s, "bookings_summary_resort", caslib="casuser")
+
+cas.table.fetch(tbl_resort,
                 fetchVars=list("arrivaldatemonth", 
                                "_Mean_"))
 ```
@@ -258,8 +262,9 @@ cas.simple.summary(s,
                    casout=list(name="bookings_summary_city", 
                                replace=TRUE))
 
-cas.table.fetch(s, 
-                table=list(name="bookings_summary_city"),
+tbl_city <- defCasTable(s, "bookings_summary_city", caslib="casuser")
+
+cas.table.fetch(tbl_city,
                 fetchVars=list("arrivaldatemonth", 
                                "_Mean_"))
 ```
@@ -304,8 +309,9 @@ cas.simple.summary(s,
                    casout=list(name="bookings_summary_resort_monthno", 
                                replace=TRUE))
 
-cas.table.fetch(s, 
-                table=list(name="bookings_summary_resort_monthno"),
+tbl_resort_monthno <- defCasTable(s, "bookings_summary_resort_monthno", caslib="casuser") 
+
+cas.table.fetch(tbl_resort_monthno,
                 fetchVars=list("arrivaldatemonth", 
                                "_Mean_", 
                                "hotel"),
@@ -326,9 +332,9 @@ cas.simple.summary(s,
                    casout=list(name="bookings_summary_city_monthno", 
                                replace=TRUE))
 
+tbl_city_monthno <- defCasTable(s, "bookings_summary_city_monthno", caslib="casuser") 
 
-cas.table.fetch(s, 
-                table=list(name="bookings_summary_city_monthno"),
+cas.table.fetch(tbl_city_monthno,
                 fetchVars=list("arrivaldatemonth", 
                                "_Mean_", 
                                "hotel"),
@@ -348,8 +354,7 @@ library(ggplot2)
 
 ### Resort Hotel
 ```{r}
-castbl_resort <- defCasTable(s, "bookings_summary_resort_monthno")
-casdf_resort <- to.casDataFrame(castbl_resort, obs=nrow(castbl_resort))
+casdf_resort <- to.casDataFrame(tbl_resort_monthno, obs=nrow(tbl_resort_monthno))
 casdf_resort <- clean_names(casdf_resort)
 df_resort <- data.frame(casdf_resort)
 
@@ -364,8 +369,7 @@ ggplot(data=df_resort, aes(x=reorder(arrival_date_month, monthno), y=mean, group
 
 ### City Hotel
 ```{r}
-castbl_city <- defCasTable(s, "bookings_summary_city_monthno")
-casdf_city <- to.casDataFrame(castbl_city, obs=nrow(castbl_city))
+casdf_city <- to.casDataFrame(tbl_city_monthno, obs=nrow(tbl_city_monthno))
 casdf_city <- clean_names(casdf_city)
 df_city <- data.frame(casdf_city)
 
@@ -390,8 +394,8 @@ cas.table.alterTable(s,
                      rename="bookings_summary_appended",
                      caslib="casuser")
 
-castbl_appended <- defCasTable(s, "bookings_summary_appended")
-casdf_appended <- to.casDataFrame(castbl_appended, obs=nrow(castbl_appended))
+tbl_appended <- defCasTable(s, "bookings_summary_appended")
+casdf_appended <- to.casDataFrame(tbl_appended, obs=nrow(tbl_appended))
 casdf_appended <- clean_names(casdf_appended)
 df_appended <- data.frame(casdf_appended)
 
