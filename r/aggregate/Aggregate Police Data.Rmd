@@ -45,13 +45,18 @@ cas.table.loadTable(s,
 
 Examine the rows and columns in the data.
 
+## Create a Reference to In-Memory Table
+
+```{r}
+tbl <- defCasTable(s, "sqf2019", caslib="casuser")
+```
+
 ## Examine the Rows
 
 Use a table.fetch action to retrieve the first 20 rows from the sqf2019 table.
 
 ```{r}
-cas.table.fetch(s,
-                table="sqf2019",
+cas.table.fetch(tbl,
                 to=20)
 ```
 
@@ -60,8 +65,7 @@ cas.table.fetch(s,
 Use the table.columnInfo action to obtain metadata about the table. The result includes the names of columns, and information about each column, including its label (if applicable), type, length, and format. The results show that the columns are the appropriate types.
 
 ```{r}
-cas.table.columnInfo(s,
-                     table="sqf2019")
+cas.table.columnInfo(tbl)
 ```
 
 # Prepare the Data
@@ -79,24 +83,27 @@ In the subset subparameter, specify N to calculate row frequencies based on the 
 cas.builtins.loadActionSet(s, 
                            actionSet="aggregation")
 
-cas.aggregation.aggregate(s,
-                          table=list(name="sqf2019",                                  
-                                     caslib="casuser",
-                          groupBy=list("MONTH2", 
-                                       "DAY2", 
-                                       "STOP_LOCATION_BORO_NAME")),  
+tbl_groupby <- defCasTable(s, 
+                           "sqf2019", 
+                           caslib="casuser",
+                           groupby=list("MONTH2", 
+                                        "DAY2", 
+                                        "STOP_LOCATION_BORO_NAME"))
+
+cas.aggregation.aggregate(tbl_groupby,  
                           varSpecs=list(list(name="STOP_ID_ANONY", 
                                              subset=list("N"))),
                                              casOut=list(name="sqfAnalysis",                       
                                                          caslib="casuser",
                                                          replace=TRUE))
+
+tbl_analysis <- defCasTable(s, "sqfAnalysis", caslib="casuser")
 ```
 
 Use a table.fetch command to view the aggregated data. Each row now represents a group of observations with a unique combination of the values MONTH2, DAY2, and STOP_LOCATION_BORO_NAME, and the count of the number of observations in each group. The data can also be considered as a long data set because there are multiple rows for each unique value of STOP_LOCATION_BORO_NAME. Each row in a group of rows with the same value of STOP_LOCATION_BORO_NAME has a unique combination of the values for DAY2 and MONTH2.
 
 ```{r}
-cas.table.fetch(s,
-                table="sqfAnalysis")
+cas.table.fetch(tbl_analysis)
 ```
 
 ## Examine Column Values
@@ -104,9 +111,7 @@ cas.table.fetch(s,
 Ensure that columns do not contain any unexpected values. Use the simple.freq action to obtain the unique values of the columns. The results show that there are no data errors.
 
 ```{r}
-cas.simple.freq(s,
-                table=list(caslib="casuser", 
-                           name="sqfAnalysis"),
+cas.simple.freq(tbl_analysis,
                 inputs=list(list(name="DAY2"),
                             list(name="MONTH2"),
                             list(name="STOP_LOCATION_BORO_NAME")))
@@ -117,13 +122,12 @@ cas.simple.freq(s,
 The data can now be reshaped into a wide data file. First, use the simple.groupByInfo action to create a table named orderByTBL that contains the unique values of the STOP_LOCATION_BORO_NAME column. These values are used to provide more descriptive names for the columns created in the reshaped data instead of the default names (for example, Bronx instead of 0, Brooklyn instead of 1, etc.). Fetch the rows from the orderByTBL table.
 
 ```{r}
-cas.simple.groupByInfo(s,
+cas.simple.groupByInfo(tbl_analysis,
                        noVars=TRUE,
                        generatedColumns=list("F"),
                        inputs=list("STOP_LOCATION_BORO_NAME"),
                        casOut=list(name="orderByTbl",
-                                   replace=TRUE),
-                       table="sqfAnalysis")
+                                   replace=TRUE))
 
 cas.table.fetch(s,
                 table="orderByTBL")
@@ -159,11 +163,12 @@ cas.dataShaping.longToWide(s,
                            id=list("STOP_LOCATION_BORO_NAME"),                                                             
                            casout=list(name="sqfWide", 
                                        replace=TRUE))
+
+tbl_wide <- defCasTable(s, "sqfWide", caslib="casuser")
 ```
 
 ```{r}
-cas.table.fetch(s,
-                table="sqfWide",
+cas.table.fetch(tbl_wide,
                 sortBy=list(list(name="MONTH2", order="ASCENDING"),
                             list(name="DAY2", order="ASCENDING")))
 ```
@@ -181,8 +186,7 @@ In the id parameter, specify the columns MONTH2 and DAY2 so that there are multi
 cas.builtins.loadActionSet(s, 
                            actionSet="dataShaping")     
 
-cas.dataShaping.wideToLong(s,
-                           table="sqfWide",                           
+cas.dataShaping.wideToLong(tbl_wide,                          
                            inputs=list("_STOP_ID_ANONY_Summary_NObs_BRONX",     
                                        "_STOP_ID_ANONY_Summary_NObs_BROOKLYN",
                                        "_STOP_ID_ANONY_Summary_NObs_MANHATTAN",
@@ -192,13 +196,14 @@ cas.dataShaping.wideToLong(s,
                                    "DAY2"), 
                            casout=list(name="sqfLong", 
                                        replace=TRUE))
+
+tbl_long <- defCasTable(s, "sqfLong", caslib="casuser")
 ```
 
 Fetch the first 20 rows from the resulting sqfLong table. The resulting table shows there are multiple rows for each unique combination of the values of those columns. For each group of rows created based on a unique combination of the values for MONTH2 and DAY2, there is a separate row for each unique value of the STOP_LOCATION_BORO_NAME.
 
 ```{r}
-cas.table.fetch(s,
-                table="sqfLong")
+cas.table.fetch(tbl_long)
 ```
 
 ## Clean Column Names
@@ -214,13 +219,14 @@ cas.table.alterTable(s,
                                   list(name="_Value_", rename="Frequency")
                                   ),
                      drop=list("_C0_"))
+
+tbl_long <- defCasTable(s, "sqfLong", caslib="casuser")
 ```
 
 Use a table.fetch action to view the cleaned table.
 
 ```{r}
-cas.table.fetch(s,
-                table="sqfLong")
+cas.table.fetch(tbl_long)
 ```
 
 ## Clean Column Values
@@ -266,8 +272,7 @@ cas.table.update(s,
 Use a table.fetch action to fetch 20 rows resulting cleaned sqfLong table, sorted by Frequency in descending order and Stop_Location_Boro_Name in ascending order. The table shows the top 20 combinations of month, day, and borough with the most number of police stops.
 
 ```{r}
-cas.table.fetch(s,
-                table="sqfLong",
+cas.table.fetch(tbl_long,
                 sortBy=list(list(name="Frequency", order="DESCENDING"),
                             list(name="Stop_Location_Boro_Name", order="ASCENDING")))
 ```
