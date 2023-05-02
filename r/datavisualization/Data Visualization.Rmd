@@ -1,7 +1,15 @@
 ---
-title: "Example 5 : Data Visualization"
+title: "Example 5 : Data Visualization with Preprocessed Data"
 output: html_document
 ---
+
+# Overview
+
+This example demonstrates how to create several types of data visualizations using the ggplot2 library in R based on data that has been preprocessed using CAS actions. The data used for this example is 28,347 crime incidents from 2021 provided by the City of Washington, DC.
+
+The data can be obtained from https://support.sas.com/documentation/onlinedoc/viya/exampledatasets/Crime_Incidents_in_2021.csv and is originally from https://opendata.dc.gov/datasets/DCGIS::crime-incidents-in-2021/about.
+
+# Load the SWAT Library and Connect to the CAS Server
 
 ```{r}
 library(swat)
@@ -9,16 +17,13 @@ library(swat)
 s <- CAS("cloud.example.com", 10065)
 ```
 
-This example demonstrates how to create data visualizations using the ggplot2 library in R based on data that has been pre-processed using CAS actions. The data used for this example are 28,347 crime incidents from 2021 provided by the City of Washington, DC.
+# Import R Packages
 
-# Import Libraries
-
-Import the tidyverse and lubridate libraries in R, and load the aggregation CAS action set.
+Import the tidyverse and lubridate packages in R.
 
 ```{r include=FALSE}
 library(tidyverse)
 library(lubridate)
-cas.builtins.loadActionSet(s, actionSet="aggregation")
 ```
 
 # Load the Data
@@ -43,7 +48,7 @@ cas.table.loadTable(s,
 
 Another method of loading data into CAS memory is to load the data from an external source that is accessible to the CAS server. This example uses the upload_file function to perform a client-side load.
 
-```{r}
+```{r include=FALSE}
 cas.upload.file(s,                                                                        
                 "https://support.sas.com/documentation/onlinedoc/viya/exampledatasets/Crime_Incidents_in_2021.csv", 
                 casOut=list(name="crimes", 
@@ -65,7 +70,7 @@ tbl <- defCasTable(s, "crimes", caslib="casuser")
 
 ## Examine the Rows
 
-Use a table.fetch action to retrieve the first five rows from the crimes table.
+Run the table.fetch action to retrieve the first five rows from the crimes table.
 
 ```{r}
 cas.table.fetch(tbl,
@@ -74,7 +79,7 @@ cas.table.fetch(tbl,
 
 ## Examine the Columns
 
-Use the table.columnInfo action to obtain metadata about the table. The result includes the names of columns, and information about each column, including its label (if applicable), type, length, and format. The results show that the columns are the appropriate types.
+Run the table.columnInfo action to obtain metadata about the table. The result includes the names of columns, and information about each column, including its label (if applicable), type, length, and format. The results show that the columns are the appropriate types.
 
 ```{r}
 cas.table.columnInfo(tbl)
@@ -82,31 +87,23 @@ cas.table.columnInfo(tbl)
 
 ## Examine Unique and Missing Values
 
-Examine the number of unique and missing values for each variable to determine whether data cleaning is necessary. Run the simple.distinct action to identify the number of distinct values and the number of missing values for each column.
+Run the simple.distinct action to identify the number of distinct values and the number of missing values for each column.
 
 ```{r}
 cas.simple.distinct(tbl)
 ```
 
-## Calculate Summary Statistics
-
-Perform exploratory analysis by calculating summary statistics including N, mean, standard deviation, minimum, and maximum for each numeric column in the data frame.
-
-```{r}
-cas.simple.summary(tbl)
-```
-
 # Visualize the Data
 
-The ggplot function from the ggplot2 library in tidyverse can be used to visualize data that has been pre-processed using CAS actions. This example demonstrates how to create a bar chart, histogram, box plot, and line plot using data that has been pre-processed using CAS actions.
+The ggplot function from the tidyverse set of packages can be used to visualize data that has been preprocessed using CAS actions. This example demonstrates how to create several common types of data visualizations, including a bar chart, histogram, box plot, and line plot.
 
-## Bar Chart
+## Create a Bar Chart
 
 Create a bar chart that shows the number of crime incidents by the shift variable.
 
 ### Aggregate the Data
 
-First, use the simple.freq action to count the number of rows by shift and use the casOut parameter to save the output to a table named CrimesByShift. Create a CAS table object named tbl_shift to reference the CrimesByShift table.
+First, run the simple.freq action to count the number of rows by shift and use the casOut parameter to save the output to a table named CrimesByShift. Create a CAS table object named tbl_shift to reference the CrimesByShift table.
 
 ```{r}
 cas.simple.freq(tbl,
@@ -120,7 +117,7 @@ tbl_shift <- defCasTable(s, "CrimesByShift", caslib="casuser")
 
 ### Convert the CAS Table to an R Data Frame
 
-Convert the CrimesByShift table to a CAS data frame using the CAS table object tbl_shift, and then convert the CAS data frame casdf_shift to an R data frame named df_shift. Use head to view rows from df_shift.
+Convert the CrimesByShift table to a casDataFrame using the CAS table object tbl_shift, and then convert the casDataFrame casdf_shift to an R DataFrame named df_shift. Use head to view rows from df_shift.
 
 ```{r}
 casdf_shift <- to.casDataFrame(tbl_shift, obs=nrow(tbl_shift))
@@ -130,7 +127,7 @@ head(df_shift)
 
 ### Plot the Data
 
-Use the ggplot function with the geom_col function to create a bar chart. Specify the R data frame df_shift as the first argument. Specify X_Charvar\_ (shift) as the X-axis variable and X_Frequency\_ as the Y-axis variable, with the bars ordered in descending order by the frequency variable.
+Use the ggplot function with the geom_col function to create a bar chart. Specify the R DataFrame df_shift as the first argument. Specify X_Charvar_ (shift) as the X-axis variable and X_Frequency_ as the Y-axis variable, and order the bars in descending order by the frequency variable.
 
 ```{r}
 ggplot(df_shift, aes(x=reorder(X_Charvar_, -X_Frequency_), y=X_Frequency_)) +
@@ -142,13 +139,13 @@ ggplot(df_shift, aes(x=reorder(X_Charvar_, -X_Frequency_), y=X_Frequency_)) +
   theme_minimal()
 ```
 
-## Histogram
+## Create a Histogram
 
 Create a histogram to show the distribution of crime incidents by the count of voting precincts.
 
 ### Aggregate the Data
 
-Use the simple.freq action to count the number of rows by the voting precinct and save the resulting output table as CrimesByVP. Create a CAS table object named tbl_vp to reference the CrimesByVP table.
+Run the simple.freq action to count the number of rows by the voting precinct and save the resulting output table as CrimesByVP. Create a CAS table object named tbl_vp to reference the CrimesByVP table.
 
 ```{r}
 cas.simple.freq(s, 
@@ -165,7 +162,7 @@ tbl_vp <- defCasTable(s, "CrimesByVP", caslib="casuser")
 
 ### Convert the CAS Table to an R Data Frame
 
-Convert the CrimesByVP table to a CAS data frame using the CAS table object tbl_vp, and then convert the CAS data frame casdf_vp to an R data frame named df_vp. Use head to view rows from the data frame.
+Convert the CrimesByVP table to a casDataFrame using the CAS table object tbl_vp, and then convert the casDataFrame casdf_vp to an R DataFrame named df_vp. Use head to view rows from the DataFrame.
 
 ```{r}
 casdf_vp <- to.casDataFrame(tbl_vp, obs=nrow(tbl_vp))
@@ -175,7 +172,7 @@ head(df_vp)
 
 ### Plot the Data
 
-Use the ggplot function with the geom_histogram function to create a histogram to show the distribution of crime incidents. Specify the R data frame df_vp as the first argument and X_Frequency\_ as the X-axis variable.
+Use the ggplot function with the geom_histogram function to create a histogram to show the distribution of crime incidents. Specify the R DataFrame df_vp as the first argument and X_Frequency_ as the X-axis variable.
 
 ```{r}
 ggplot(df_vp, aes(x=X_Frequency_)) +
@@ -186,15 +183,17 @@ ggplot(df_vp, aes(x=X_Frequency_)) +
        subtitle='Washington DC, 2021')
 ```
 
-## Box Plot
+## Create a Box Plot
 
-Create a Box Plot that shows summary statistics for the number of crime incidents among neighborhood clusters by ward.
+Create a box plot that shows summary statistics for the number of crime incidents among neighborhood clusters by ward.
 
 ### Aggregate the Data
 
-Aggregate the data to count the number of crime incidents by Neighborhood Cluster and Ward and save the resulting output table as CrimesByNCWard. Create a CAS table object named tbl_nc_ward to reference the CrimesByNCWard table.
+Load the aggregation CAS action set. Run the aggregration.aggregate action to count the number of crime incidents by neighborhood cluster and ward and save the resulting output table as CrimesByNCWard. Create a CAS table object named tbl_nc_ward to reference the CrimesByNCWard table.
 
 ```{r}
+cas.builtins.loadActionSet(s, actionSet="aggregation")
+
 cas.aggregation.aggregate(s,                                                     
                           table=list(name="crimes",
                                      caslib="casuser",
@@ -220,7 +219,7 @@ head(df_nc_ward)
 
 ### Plot the Data
 
-Use the as.character function to convert the Ward variable to character type. Use ggplot to with the geom_boxplot function to create a boxplot to show the summary statistics for number of crime incidents by Ward. Specify ward as the X-axis variable and X_CCN_Summary_NObs\_ (number of rows) as the Y-axis variable.
+Use the as.character function to convert the Ward variable to character type. Use ggplot to with the geom_boxplot function to create a box plot to show the summary statistics for number of crime incidents by Ward. Specify ward as the X-axis variable and X_CCN_Summary_NObs_ (number of rows) as the Y-axis variable.
 
 ```{r}
 df_nc_ward$WARD <- as.character(df_nc_ward$WARD)
@@ -232,13 +231,13 @@ ggplot(data=df_nc_ward, aes(x=WARD, y=X_CCN_Summary_NObs_)) +
        subtitle = 'Washington DC, 2021')
 ```
 
-## Line Plot
+## Create a Line Plot
 
 Create a line plot to show the number of crime incidents by month in 2021.
 
 ### Convert the CAS Table to an R Data Frame
 
-Convert the crimes in-memory table to a CAS data frame using the CAS table object tbl, and then convert the CAS data frame casdf_crimes to an R data frame named df_crimes. Use head to view the rows.
+Convert the crimes in-memory table to a casDataFrame using the CAS table object tbl, and then convert the casDataFrame casdf_crimes to an R DataFrame named df_crimes. Use head to view the rows.
 
 ```{r}
 casdf_crimes <- to.casDataFrame(tbl, obs=nrow(tbl))
@@ -305,7 +304,7 @@ head(df_monthFilter)
 
 ### Plot the Data
 
-Use ggplot with the geom_line function to plot the data to show the number of crime incidents by month. Specify df_monthFilter as the first argument. Specify date_f (month) as the X-axis variable and X_CCN_Summary_NObs\_ (number of rows) as the Y-axis variable and set the group parameter equal to 1.
+Use ggplot with the geom_line function to plot the data to show the number of crime incidents by month. Specify df_monthFilter as the first argument. Specify date_f (month) as the X-axis variable and X_CCN_Summary_NObs_ (number of rows) as the Y-axis variable and set the group parameter equal to 1.
 
 ```{r}
 ggplot(df_monthFilter, aes(x=date_f, y=X_CCN_Summary_NObs_, group=1)) +
