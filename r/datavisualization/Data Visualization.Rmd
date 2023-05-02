@@ -1,7 +1,6 @@
 ---
 title: "Example 5 : Data Visualization"
 output: html_document
-date: '2023-03-30'
 ---
 
 ```{r}
