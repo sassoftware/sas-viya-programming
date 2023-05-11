@@ -131,12 +131,12 @@ Use the ggplot function with the geom_col function to create a bar chart. Specif
 
 ```{r}
 ggplot(df_shift, aes(x=reorder(X_Charvar_, -X_Frequency_), y=X_Frequency_)) +
-  geom_col(fill="grey") +
+  geom_col(fill="lightblue") +
   labs(x = "Shift", 
        y = "Number of Crime Incidents", 
        title = "Number of Crime Incidents by Shift",
        subtitle = "Washington DC, 2021") +
-  theme_minimal()
+  theme_classic()
 ```
 
 ## Create a Histogram
@@ -176,10 +176,11 @@ Use the ggplot function with the geom_histogram function to create a histogram t
 
 ```{r}
 ggplot(df_vp, aes(x=X_Frequency_)) +
-  geom_histogram(binwidth=25, color="black", fill="white") +
-  labs(x='Crime Incidents',
-       y='Count of Voting Precincts',
-       title='Distribution of the Frequency of Crime Incidents',
+  geom_histogram(binwidth=50, color="black", fill="white") +
+  ylim(0, 40) +
+  labs(x='Number of Crime Incidents',
+       y='Number of Voting Precincts',
+       title='Distribution of the Frequency of Crime Incidents by Voting Precincts',
        subtitle='Washington DC, 2021')
 ```
 
@@ -224,11 +225,11 @@ Use the as.character function to convert the Ward variable to character type. Us
 ```{r}
 df_nc_ward$WARD <- as.character(df_nc_ward$WARD)
 ggplot(data=df_nc_ward, aes(x=WARD, y=X_CCN_Summary_NObs_)) +
-  geom_boxplot() +
+  geom_boxplot(fill="lightblue") +
   labs(x = 'Ward', 
-       y = 'Crime Incidents per Neighborhood Cluster',
-       title = 'Box Plot of Summary Statistics by Ward',
-       subtitle = 'Washington DC, 2021')
+       y = 'Number of Crime Incidents',
+       title = 'Box Plot of Crime Incidents by Ward',
+       subtitle = 'Neighborhood Clusters in Washington DC, 2021')
 ```
 
 ## Create a Line Plot
@@ -308,11 +309,13 @@ Use ggplot with the geom_line function to plot the data to show the number of cr
 
 ```{r}
 ggplot(df_monthFilter, aes(x=date_f, y=X_CCN_Summary_NObs_, group=1)) +
-  geom_line() +
+  geom_line(size=2, color="lightblue") +
+  geom_point(size=3, shape=21, color="lightblue", fill="lightblue", stroke = 2) +
+  ylim(1500, 3000) +
   labs(x = "Month", 
        y = "Number of Crime Incidents",
        title = "Number of Crime Incidents by Month",
        subtitle = "Washington DC, 2021") +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 70, vjust = 0.5, hjust=0.5))
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=0.5))
 ```
