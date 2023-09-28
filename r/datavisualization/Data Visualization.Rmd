@@ -11,10 +11,12 @@ The data can be obtained from https://support.sas.com/documentation/onlinedoc/vi
 
 # Load the SWAT Library and Connect to the CAS Server
 
+Load the SWAT library and then create a connection to the CAS server using the CAS function and assign the CAS connection object to the object s. The first argument specifies the host name, and the second argument specifies the port. The host and port information provided below is an example.
+
 ```{r}
 library(swat)
 # change the host and port to match your site
-s <- CAS("cloud.example.com", 10065)
+s <- CAS("example.sas.com", 10065)
 ```
 
 # Import R Packages
@@ -46,7 +48,7 @@ cas.table.loadTable(s,
 
 ## Load a Client-Side Data File into CAS
 
-Another method of loading data into CAS memory is to load the data from an external source that is accessible to the CAS server. This example uses the upload_file function to perform a client-side load.
+Another method of loading data into CAS memory is to load the data from an external source that is accessible to the CAS server. This example uses the cas.upload.file function to perform a client-side load.
 
 ```{r include=FALSE}
 cas.upload.file(s,                                                                        
@@ -62,7 +64,7 @@ cas.upload.file(s,
 
 ## Create a Reference to the In-Memory Table
 
-Use the defCasTable SWAT function to create a reference to the crimes table and save the result as a object named tbl. Therefore, any action or method that is run on the CAS table object tbl will include the parameters in tbl.
+The defCasTable function creates an R object that references the in-memory CASTable. This allows you to use functions with an R syntax on the in-memory table without needing to explicitly write the CAS action and also allows you to use this object in CAS actions without having to specify parameters such as the connection object, in-memory CASTable name, or caslib.
 
 ```{r}
 tbl <- defCasTable(s, "crimes", caslib="casuser")
@@ -103,34 +105,28 @@ Create a bar chart that shows the number of crime incidents by the shift variabl
 
 ### Aggregate the Data
 
-First, run the simple.freq action to count the number of rows by shift and use the casOut parameter to save the output to a table named CrimesByShift. Create a CAS table object named tbl_shift to reference the CrimesByShift table.
+First, run the  simple.freq action to count the number of rows by shift and specify the $Frequency key to save the output table to a casDataFrame object named casdf_shift.
 
 ```{r}
-cas.simple.freq(tbl,
-                inputs=list("SHIFT"),
-                casOut=list(name="CrimesByShift",                      
-                            caslib='casuser',
-                            replace=TRUE))
-
-tbl_shift <- defCasTable(s, "CrimesByShift", caslib="casuser")
+casdf_shift <- cas.simple.freq(tbl,
+                inputs=list("SHIFT"))$Frequency
 ```
 
 ### Convert the CAS Table to an R Data Frame
 
-Convert the CrimesByShift table to a casDataFrame using the CAS table object tbl_shift, and then convert the casDataFrame casdf_shift to an R DataFrame named df_shift. Use head to view rows from df_shift.
+Convert the casDataFrame casdf_shift to an R DataFrame named df_shift. Use head to view rows from df_shift.
 
 ```{r}
-casdf_shift <- to.casDataFrame(tbl_shift, obs=nrow(tbl_shift))
-df_shift <- data.frame(casdf_shift)
+df_shift <- data.frame(tbl_shift)
 head(df_shift)
 ```
 
 ### Plot the Data
 
-Use the ggplot function with the geom_col function to create a bar chart. Specify the R DataFrame df_shift as the first argument. Specify X_Charvar_ (shift) as the X-axis variable and X_Frequency_ as the Y-axis variable, and order the bars in descending order by the frequency variable.
+Use the ggplot function with the geom_col function to create a bar chart. Specify the R DataFrame df_shift as the first argument. Specify CharVar (shift) as the X-axis variable and Frequency as the Y-axis variable, and order the bars in descending order by the frequency variable.
 
 ```{r}
-ggplot(df_shift, aes(x=reorder(X_Charvar_, -X_Frequency_), y=X_Frequency_)) +
+ggplot(df_shift, aes(x=reorder(CharVar, -Frequency), y=Frequency)) +
   geom_col(fill="lightblue") +
   labs(x = "Shift", 
        y = "Number of Crime Incidents", 
@@ -145,37 +141,30 @@ Create a histogram to show the distribution of crime incidents by the count of v
 
 ### Aggregate the Data
 
-Run the simple.freq action to count the number of rows by the voting precinct and save the resulting output table as CrimesByVP. Create a CAS table object named tbl_vp to reference the CrimesByVP table.
+Run the simple.freq action to count the number of rows by the voting precinct and specify the $Frequency key save the resulting output table as a casDataFrame object named casdf_vp.
 
 ```{r}
-cas.simple.freq(s, 
-                table=list(caslib="casuser",
-                           name="crimes"),
-                inputs=list("VOTING_PRECINCT"),
-                casOut=list(name="CrimesByVP",                      
-                            caslib='casuser',
-                            replace=TRUE))
-
-tbl_vp <- defCasTable(s, "CrimesByVP", caslib="casuser")
-
+casdf_vp <- cas.simple.freq(s, 
+                            table=list(caslib="casuser",
+                            name="crimes"),
+                            inputs=list("VOTING_PRECINCT"))$Frequency
 ```
 
 ### Convert the CAS Table to an R Data Frame
 
-Convert the CrimesByVP table to a casDataFrame using the CAS table object tbl_vp, and then convert the casDataFrame casdf_vp to an R DataFrame named df_vp. Use head to view rows from the DataFrame.
+Convert the casDataFrame casdf_vp to an R DataFrame named df_vp. Use head to view rows from the DataFrame.
 
 ```{r}
-casdf_vp <- to.casDataFrame(tbl_vp, obs=nrow(tbl_vp))
 df_vp <- data.frame(casdf_vp)
 head(df_vp)
 ```
 
 ### Plot the Data
 
-Use the ggplot function with the geom_histogram function to create a histogram to show the distribution of crime incidents. Specify the R DataFrame df_vp as the first argument and X_Frequency_ as the X-axis variable.
+Use the ggplot function with the geom_histogram function to create a histogram to show the distribution of crime incidents. Specify the R DataFrame df_vp as the first argument and Frequency as the X-axis variable.
 
 ```{r}
-ggplot(df_vp, aes(x=X_Frequency_)) +
+ggplot(df_vp, aes(x=Frequency)) +
   geom_histogram(binwidth=50, color="black", fill="white") +
   ylim(0, 40) +
   labs(x='Number of Crime Incidents',
@@ -190,7 +179,7 @@ Create a box plot that shows summary statistics for the number of crime incident
 
 ### Aggregate the Data
 
-Load the aggregation CAS action set. Run the aggregration.aggregate action to count the number of crime incidents by neighborhood cluster and ward and save the resulting output table as CrimesByNCWard. Create a CAS table object named tbl_nc_ward to reference the CrimesByNCWard table.
+Load the aggregation CAS action set. Run the aggregation.aggregate action to count the number of crime incidents by neighborhood cluster and ward and save the resulting output table as CrimesByNCWard. Create a CAS table object named tbl_nc_ward to reference the CrimesByNCWard table.
 
 ```{r}
 cas.builtins.loadActionSet(s, actionSet="aggregation")
@@ -210,7 +199,7 @@ tbl_nc_ward <- defCasTable(s, "CrimesByNCWard", caslib="casuser")
 
 ### Convert the CAS Table to an R Data Frame
 
-Convert the CrimesByNCWard table to a CAS data frame using the CAS table object tbl_nc_ward, and then convert the CAS data frame casdf_nc_ward to an R data frame named df_nc_ward. Use head to view the rows.
+Convert the CrimesByNCWard table to a casDataFrame using the CAS table object tbl_nc_ward, and then convert the casDataFrame casdf_nc_ward to an R DataFrame named df_nc_ward. This is necessary because the ggplot function cannot use a reference to a CAS table since a CAS table is on the server and not the client-side. Use head to view the rows. 
 
 ```{r}
 casdf_nc_ward <- to.casDataFrame(tbl_nc_ward, obs=nrow(tbl_nc_ward))
