@@ -13,7 +13,7 @@ A collection of repositories contain code samples and other materials to help yo
 * [/recommend](https://github.com/sabisw/sas-viya-programming/tree/patch-1/recommend) contains programs for creating a recommender system with the recommend action set. The action set is part of the *SAS Viya 3.3* release and you must have access to a version 3.3 instance of SAS Cloud Analytic Services (CAS).
 * [/webinars](https://github.com/sabisw/sas-viya-programming/tree/patch-1/webinars) contains demos of the SAS Viya Python and R clients presented on [Have Your Cake and Eat It Too – With R, Python + SAS®](https://www.sas.com/en_us/webinars/have-your-cake-eat-it-python-sas.html).
 ## Contributing 
-The [Contributor Agreement](https://github.com/sassoftware/sas-viya-programming/blob/master/ContributorAgreement.txt) details on how contributions can be made to the project. 
+The [Contributor Agreement](https://github.com/sassoftware/sas-viya-programming/blob/master/ContributorAgreement.txt) details on making contributions to the project. 
 ## Licensing 
 Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at [LICENSE.txt](https://github.com/sassoftware/sas-viya-programming/blob/master/LICENSE)
 
